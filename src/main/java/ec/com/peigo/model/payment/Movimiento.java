@@ -44,6 +44,9 @@ public class Movimiento implements Serializable {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long idMovimiento;
 
+	@Column(name = "numero_transaccion")
+	private Long numeroTransaccion;
+
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date fecha;
 

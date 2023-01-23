@@ -5,10 +5,13 @@ package ec.com.peigo.controller.payment;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import ec.com.peigo.controller.payment.dto.PagoEntradaDto;
+import ec.com.peigo.controller.payment.dto.PagoSalidaDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +48,7 @@ import ec.com.peigo.service.payment.MovimientoService;
  *          </p>
  */
 @RestController
-@RequestMapping("/api/movimientos")
+@RequestMapping("/api/paymentTransaction")
 public class MovimientoController {
 
 	private static final Logger log = LoggerFactory.getLogger(MovimientoController.class);
@@ -53,7 +56,7 @@ public class MovimientoController {
 	private static final int limiteDiario = 1000;
 
 	@Autowired
-	private MovimientoService service;
+	private MovimientoService movimientoService;
 
 	@Autowired
 	private ClienteService clienteService;
@@ -68,62 +71,94 @@ public class MovimientoController {
 	 * [Author: jpucha, Date: 22 ene. 2023]
 	 * </p>
 	 *
-	 * @param movimientoEntradaDto
+	 * @param pagoEntradaDto
 	 *            parametro de entrada
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PostMapping
-	public ResponseEntity<?> create(@Validated @RequestBody MovimientoEntradaDto movimientoEntradaDto) {
+	public ResponseEntity<?> create(@Validated @RequestBody PagoEntradaDto pagoEntradaDto) {
 
 		try {
-			if (ObjectUtils.isEmpty(movimientoEntradaDto.getIdentificacion())
-					|| ObjectUtils.isEmpty(movimientoEntradaDto.getNumeroCuenta())) {
-				return new ResponseEntity<>("La identificación y el número de cuenta son obligatorios",
+			//valido que los datos de entrada de cuenta origen y cuenta destino no sean vacios o nulos
+			if (ObjectUtils.isEmpty(pagoEntradaDto.getCuentaOrigen()) ||  ObjectUtils.isEmpty(pagoEntradaDto.getCuentaDestino())
+					|| (BigDecimal.ZERO == pagoEntradaDto.getSaldo() )) {
+				return new ResponseEntity<>("Cuenta origen, cuenta destino, saldo son obligatorios.",
 						HttpStatus.BAD_REQUEST);
 			}
-			Optional<Cliente> cliente = clienteService
-					.obtenerPorIdentificacion(movimientoEntradaDto.getIdentificacion());
-			if (ObjectUtils.isEmpty(cliente)) {
-				return new ResponseEntity<>("El cliente no existe con la identificación", HttpStatus.BAD_REQUEST);
-			}
-			Optional<Cuenta> cuenta = cuentaService.obtenerPorNumeroCuenta(movimientoEntradaDto.getNumeroCuenta());
-			if (ObjectUtils.isEmpty(cuenta)) {
-				return new ResponseEntity<>("La cuenta no existe con el número de cuenta", HttpStatus.BAD_REQUEST);
-			}
-			Movimiento movimiento = new Movimiento();
-			movimiento.setIdCliente(cliente.get().getClienteId());
-			movimiento.setIdCuenta(cuenta.get().getIdCuenta());
-			BigDecimal saldo;
-			movimientoEntradaDto.setValor(Math.abs(movimientoEntradaDto.getValor()));
-			if (TipoMovimientoEnum.CREDITO.getDescripcion()
-					.equalsIgnoreCase(movimientoEntradaDto.getTipoMovimiento())) {
-				saldo = cuenta.get().getSaldoInicial().add(BigDecimal.valueOf(movimientoEntradaDto.getValor()));
-			} else if (TipoMovimientoEnum.DEBITO.getDescripcion()
-					.equalsIgnoreCase(movimientoEntradaDto.getTipoMovimiento())) {
-				if (BigDecimal.ZERO.compareTo(cuenta.get().getSaldoInicial()) == 0) {
-					return new ResponseEntity<>("Saldo no disponible", HttpStatus.BAD_REQUEST);
-				}
-				Double sumaDiariaDebito = service.obtenerSumaValorClienteCuentaFecha(cliente.get().getClienteId(),
-						cuenta.get().getIdCuenta(), TipoMovimientoEnum.DEBITO.getDescripcion(), new Date());
-				if (limiteDiario <= sumaDiariaDebito.doubleValue() + movimientoEntradaDto.getValor()) {
-					return new ResponseEntity<>("Cupo diario Excedido", HttpStatus.BAD_REQUEST);
-				}
-				saldo = cuenta.get().getSaldoInicial().subtract(BigDecimal.valueOf(movimientoEntradaDto.getValor()));
-				movimientoEntradaDto.setValor(-movimientoEntradaDto.getValor());
-
-			} else {
-				return new ResponseEntity<>("Tipo de movimiento no encontrado", HttpStatus.BAD_REQUEST);
+			// valido que el saldo no sean vacio o nulo y que sea un saldo positivo
+			if (pagoEntradaDto.getSaldo().compareTo(BigDecimal.ZERO) <= 0) {
+				return new ResponseEntity<>("Saldo no puede ser cero o negativo.",
+						HttpStatus.BAD_REQUEST);
 			}
 
-			movimiento.setSaldoAnterior(cuenta.get().getSaldoInicial());
-			movimiento.setSaldo(saldo);
-			movimiento.setTipoMovimiento(movimientoEntradaDto.getTipoMovimiento());
-			movimiento.setFecha(new Date());
-			movimiento.setValor(BigDecimal.valueOf(movimientoEntradaDto.getValor()));
-			Movimiento movimientoGuardado = service.create(movimiento);
-			cuenta.get().setSaldoInicial(saldo);
-			cuentaService.update(cuenta.get());
-			return new ResponseEntity<Movimiento>(movimientoGuardado, HttpStatus.CREATED);
+			Optional<Cuenta> cuentaOrigen = cuentaService.obtenerPorNumeroCuenta(pagoEntradaDto.getCuentaOrigen());
+			if (ObjectUtils.isEmpty(cuentaOrigen)) {
+				return new ResponseEntity<>("La cuenta origen proporcionada no existe.", HttpStatus.BAD_REQUEST);
+			}
+			//Validacion que este dentro del limite diario
+			Double sumaDiariaDebito = movimientoService.obtenerSumaValorClienteCuentaFecha(cuentaOrigen.get().getIdCliente(),
+					cuentaOrigen.get().getIdCuenta(), TipoMovimientoEnum.DEBITO.getDescripcion(), new Date());
+			if (limiteDiario <= sumaDiariaDebito.doubleValue() + pagoEntradaDto.getSaldo().doubleValue()) {
+				return new ResponseEntity<>("Cupo diario Excedido", HttpStatus.BAD_REQUEST);
+			}
+			//Valido que la cuenta origen tenga saldo
+			if (BigDecimal.ZERO.compareTo(cuentaOrigen.get().getSaldoInicial()) == 0) {
+				return new ResponseEntity<>("Saldo no disponible", HttpStatus.BAD_REQUEST);
+			}
+			//valido que el movimiento a debitar sea menor o igual que el saldo que se tiene en la cuenta
+			if (pagoEntradaDto.getSaldo().compareTo(cuentaOrigen.get().getSaldoInicial()) > 0) {
+				return new ResponseEntity<>("Saldo no disponible", HttpStatus.BAD_REQUEST);
+			}
+
+			Optional<Cuenta> cuentaDestino = cuentaService.obtenerPorNumeroCuenta(pagoEntradaDto.getCuentaDestino());
+			if (ObjectUtils.isEmpty(cuentaDestino)) {
+				return new ResponseEntity<>("La cuenta destino proporcionada no existe.", HttpStatus.BAD_REQUEST);
+			}
+
+			Optional<Cliente> clienteOrigen = clienteService.obtenerPorId(cuentaOrigen.get().getIdCliente());
+			if (ObjectUtils.isEmpty(clienteOrigen)) {
+				return new ResponseEntity<>("El cliente origen no existe para el id de cuenta consultado.", HttpStatus.BAD_REQUEST);
+			}
+
+			Optional<Cliente> clienteDestino = clienteService.obtenerPorId(cuentaDestino.get().getIdCliente());
+			if (ObjectUtils.isEmpty(clienteDestino)) {
+				return new ResponseEntity<>("El cliente destino no existe para el id de cuenta consultado.", HttpStatus.BAD_REQUEST);
+			}
+
+			Movimiento debito = new Movimiento();
+			debito.setIdCliente(clienteOrigen.get().getClienteId());
+			debito.setIdCuenta(cuentaOrigen.get().getIdCuenta());
+			debito.setNumeroTransaccion(1000L);
+			debito.setValor(pagoEntradaDto.getSaldo());
+			debito.setTipoMovimiento(TipoMovimientoEnum.DEBITO.getDescripcion());
+			debito.setSaldoAnterior(cuentaOrigen.get().getSaldoInicial());
+			debito.setSaldo(debito.getSaldoAnterior().subtract(debito.getValor()));
+			debito.setFecha(new Date());
+			//Guardo el debito
+			Movimiento movimientoOrigenGuardado = movimientoService.create(debito);
+			//Actualizar cuenta origen
+			cuentaOrigen.get().setSaldoInicial(debito.getSaldo());
+			cuentaService.update(cuentaOrigen.get());
+
+			Movimiento credito = new Movimiento();
+			credito.setIdCliente(clienteDestino.get().getClienteId());
+			credito.setIdCuenta(cuentaDestino.get().getIdCuenta());
+			credito.setNumeroTransaccion(1000L);
+			credito.setValor(pagoEntradaDto.getSaldo());
+			credito.setTipoMovimiento(TipoMovimientoEnum.CREDITO.getDescripcion());
+			credito.setSaldoAnterior(cuentaDestino.get().getSaldoInicial());
+			credito.setSaldo(credito.getSaldoAnterior().add(credito.getValor()));
+			credito.setFecha(new Date());
+			//Guardo el credito
+			Movimiento movimientoDestinoGuardado = movimientoService.create(credito);
+			//Actualizar cuanta destino
+			cuentaDestino.get().setSaldoInicial(credito.getSaldo());
+			cuentaService.update(cuentaDestino.get());
+			PagoSalidaDto resultado = new PagoSalidaDto();
+			resultado.setNumeroOperacion(movimientoDestinoGuardado.getNumeroTransaccion());
+			resultado.setSaldoCuentaOrigen(movimientoOrigenGuardado.getSaldo());
+			resultado.setSaldoCuentaDestino(movimientoDestinoGuardado.getSaldo());
+			return new ResponseEntity<PagoSalidaDto>(resultado, HttpStatus.CREATED);
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);
 			return new ResponseEntity<>("Por favor comuniquese con el administrador", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -161,7 +196,7 @@ public class MovimientoController {
 				return new ResponseEntity<>("La cuenta no existe con el número de cuenta", HttpStatus.BAD_REQUEST);
 			}
 
-			List<Movimiento> listadoMovimiento = service.obtenerPorClienteCuenta(cliente.get().getClienteId(),
+			List<Movimiento> listadoMovimiento = movimientoService.obtenerPorClienteCuenta(cliente.get().getClienteId(),
 					cuenta.get().getIdCuenta());
 			if (null == listadoMovimiento || listadoMovimiento.isEmpty()) {
 				return new ResponseEntity<>("No existen movimientos con lo parametros indicados.", HttpStatus.OK);
@@ -192,14 +227,14 @@ public class MovimientoController {
 			if (ObjectUtils.isEmpty(movimientoEntradaDto.getIdMovimiento())) {
 				return new ResponseEntity<>("El id del movimiento es obligatorio", HttpStatus.BAD_REQUEST);
 			}
-			Optional<Movimiento> movimientoEncontrado = service.obtenerPorId(movimientoEntradaDto.getIdMovimiento());
+			Optional<Movimiento> movimientoEncontrado = movimientoService.obtenerPorId(movimientoEntradaDto.getIdMovimiento());
 			if (movimientoEncontrado.isPresent()) {
 				Movimiento movimiento = movimientoEncontrado.get();
 				SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 
 				Date date = formatter.parse(movimientoEntradaDto.getFecha());
 				movimiento.setFecha(date);
-				Movimiento movimientoGuardado = service.update(movimiento);
+				Movimiento movimientoGuardado = movimientoService.update(movimiento);
 				return new ResponseEntity<Movimiento>(movimientoGuardado, HttpStatus.OK);
 			}
 			return new ResponseEntity<>("No se encuentra en movimiento", HttpStatus.BAD_REQUEST);
@@ -228,9 +263,9 @@ public class MovimientoController {
 			if (ObjectUtils.isEmpty(id)) {
 				return new ResponseEntity<>("El id del movimiento es obligatorio", HttpStatus.BAD_REQUEST);
 			}
-			Optional<Movimiento> movimientoEncontrado = service.obtenerPorId(id);
+			Optional<Movimiento> movimientoEncontrado = movimientoService.obtenerPorId(id);
 			if (movimientoEncontrado.isPresent()) {
-				service.delete(id);
+				movimientoService.delete(id);
 				return new ResponseEntity<>("Registro Eliminado", HttpStatus.OK);
 			}
 			return new ResponseEntity<String>(
