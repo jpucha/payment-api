@@ -1,28 +1,69 @@
 package ec.com.peigo.model;
 
+import java.io.Serializable;
+import java.util.List;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
-import javax.persistence.*;
-import java.util.Set;
-
-@Getter
-@Setter
 @Entity
-@Table(name = "user")
-public class DAOUser {
+@Table(name = "usuarios")
+public class DAOUser implements Serializable {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id_user")
+    private Long idUser;
     @Column
     private String username;
     @Column
-    @JsonIgnore
     private String password;
     @JsonIgnore
-    @OneToMany(mappedBy="user",fetch=FetchType.EAGER)
-    private Set<DAOAuthority> authorities;
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private List<DAOAuthority> authorities;
+
+    public Long getIdUser() {
+        return idUser;
+    }
+
+    public void setIdUser(Long idUser) {
+        this.idUser = idUser;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public List<DAOAuthority> getAuthorities() {
+        return authorities;
+    }
+
+    public void setAuthorities(List<DAOAuthority> authorities) {
+        this.authorities = authorities;
+    }
+
 }
