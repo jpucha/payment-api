@@ -14,6 +14,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.validation.constraints.NotNull;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -44,11 +45,15 @@ public class Cuenta implements Serializable {
 	@Column(name = "id_cuenta")
 	private Long idCuenta;
 
+	@NotNull
 	private String estado;
 
+	@Column(unique = true)
+	@NotNull
 	private int numero;
 
 	@Column(name = "saldo_inicial")
+	@NotNull
 	private BigDecimal saldoInicial;
 
 	@Column(name = "tipo_cuenta")
@@ -65,6 +70,7 @@ public class Cuenta implements Serializable {
 	@JsonIgnore
 	private List<Movimiento> movimientos;
 
+	@NotNull
 	@Column(name = "id_cliente")
 	private Long idCliente;
 }

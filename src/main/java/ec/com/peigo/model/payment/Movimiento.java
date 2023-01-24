@@ -45,7 +45,7 @@ public class Movimiento implements Serializable {
 	private Long idMovimiento;
 
 	@Column(name = "numero_transaccion")
-	private Long numeroTransaccion;
+	private String numeroTransaccion;
 
 	@Temporal(TemporalType.TIMESTAMP)
 	private Date fecha;

@@ -7,8 +7,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+import ec.com.peigo.controller.payment.dto.PaymentInDto;
 import ec.com.peigo.controller.payment.dto.ReporteDto;
+import ec.com.peigo.controller.payment.dto.ResponseDto;
 import ec.com.peigo.model.payment.Movimiento;
+import org.springframework.http.ResponseEntity;
 
 /**
  * 
@@ -38,5 +41,11 @@ public interface MovimientoService {
 	Double obtenerSumaValorClienteCuentaFecha(Long clienteId, Long idCuenta, String tipoMovimiento, Date fecha);
 
 	List<ReporteDto> obtenerPorFechas(Date fechaInicial, Date fechaFinal);
+
+	/**
+	 * @autor jpucha
+	 * Create payment transaction.
+	 * */
+	ResponseEntity<?> createPaymentTransaction(ResponseDto responseDto, PaymentInDto paymentInDto, String transactionNumber) throws Exception;
 
 }

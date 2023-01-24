@@ -3,10 +3,6 @@
  */
 package ec.com.peigo;
 
-import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -14,21 +10,21 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
+import org.springframework.http.ResponseEntity;
 
+import ec.com.peigo.model.payment.Cliente;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import ec.com.peigo.model.payment.Cliente;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
+ * 
  * <b> Clase test para el cliente. </b>
  * 
  * @author jpucha
@@ -41,38 +37,38 @@ import ec.com.peigo.model.payment.Cliente;
 @TestMethodOrder(OrderAnnotation.class)
 public class TestCliente {
 
+	@Autowired
+	private TestRestTemplate restTemplate;
 
-    @Autowired
-    private ObjectMapper mapper;
-    @Autowired
-    private WebApplicationContext context;
+	@Autowired
+	private ObjectMapper mapper;
 
-    private MockMvc mvc;
+	@Test
+	@Order(1)
+	public void post_createNewClient_Returns_201_Created() throws JsonProcessingException {
+		Cliente cliente = new Cliente();
+		cliente.setClienteId(1L);
+		cliente.setNombre("Susana Gonzalez");
+		cliente.setGenero("F");
+		cliente.setEdad(54);
+		cliente.setIdentificacion("1712312312");
+		cliente.setDireccion("Av. Colon y Av. 6 de diciembre");
+		cliente.setTelefono(909090909);
+		cliente.setContrasena("1234");
+		cliente.setEstado(Boolean.TRUE.toString());
+		HttpEntity<String> entity = getStringHttpEntity(cliente);
+		ResponseEntity<String> response = restTemplate.postForEntity("/api/clientes", entity, String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
-    @BeforeEach
-    public void setup() {
-        mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
-    }
+	}
 
-    @Test
-    @Order(1)
-    @WithMockUser(username = "felord",password = "felord.cn",roles = {"ADMIN"})
-    public void post_createNewClient_Returns_201_Created() throws Exception {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private HttpEntity<String> getStringHttpEntity(Object object) throws JsonProcessingException {
 
-        Cliente cliente = new Cliente();
-        cliente.setClienteId(1L);
-        cliente.setNombre("Susana Gonzalez");
-        cliente.setGenero("F");
-        cliente.setEdad(54);
-        cliente.setIdentificacion("1712312312");
-        cliente.setDireccion("Av. Colon y Av. 6 de diciembre");
-        cliente.setTelefono(909090909);
-        cliente.setContrasena("1234");
-        cliente.setEstado(Boolean.TRUE.toString());		
-        mvc.perform(MockMvcRequestBuilders.post("/api/clientes").accept(MediaType.APPLICATION_JSON)//.header(HttpHeaders.AUTHORIZATION, "Bearer token")
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(cliente))).andExpect(status().isCreated());
-    }
-
-
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		String jsonCliente = mapper.writeValueAsString(object);
+		return (HttpEntity<String>) new HttpEntity(jsonCliente, headers);
+	}
 
 }
