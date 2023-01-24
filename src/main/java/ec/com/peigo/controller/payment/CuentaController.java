@@ -94,7 +94,7 @@ public class CuentaController {
 
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);
-			return new ResponseEntity<>("Por favor comuniquese con el administrador", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>("Por favor comuniquese con el administrador: "+e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 

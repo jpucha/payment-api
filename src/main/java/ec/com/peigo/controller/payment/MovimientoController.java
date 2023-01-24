@@ -5,13 +5,13 @@ package ec.com.peigo.controller.payment;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
-import ec.com.peigo.controller.payment.dto.PagoEntradaDto;
-import ec.com.peigo.controller.payment.dto.PagoSalidaDto;
+import ec.com.peigo.controller.payment.dto.PaymentInDto;
+import ec.com.peigo.controller.payment.dto.ResponseDto;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -71,98 +71,163 @@ public class MovimientoController {
 	 * [Author: jpucha, Date: 22 ene. 2023]
 	 * </p>
 	 *
-	 * @param pagoEntradaDto
+	 * @param paymentInDto
 	 *            parametro de entrada
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PostMapping
-	public ResponseEntity<?> create(@Validated @RequestBody PagoEntradaDto pagoEntradaDto) {
+	public ResponseEntity<?> create(@Validated @RequestBody PaymentInDto paymentInDto) {
 
 		try {
-			//valido que los datos de entrada de cuenta origen y cuenta destino no sean vacios o nulos
-			if (ObjectUtils.isEmpty(pagoEntradaDto.getCuentaOrigen()) ||  ObjectUtils.isEmpty(pagoEntradaDto.getCuentaDestino())
-					|| (BigDecimal.ZERO == pagoEntradaDto.getSaldo() )) {
-				return new ResponseEntity<>("Cuenta origen, cuenta destino, saldo son obligatorios.",
-						HttpStatus.BAD_REQUEST);
+			ResponseDto responseDto = new ResponseDto();
+			//validations
+			if(validate(paymentInDto, responseDto)){
+				//Get transaction number.
+				String transactionNumber = getTransactionNumber(responseDto.getCuentaOrigen().get().getNumero());
+				return movimientoService.createPaymentTransaction(responseDto,paymentInDto,transactionNumber);
 			}
-			// valido que el saldo no sean vacio o nulo y que sea un saldo positivo
-			if (pagoEntradaDto.getSaldo().compareTo(BigDecimal.ZERO) <= 0) {
-				return new ResponseEntity<>("Saldo no puede ser cero o negativo.",
-						HttpStatus.BAD_REQUEST);
-			}
-
-			Optional<Cuenta> cuentaOrigen = cuentaService.obtenerPorNumeroCuenta(pagoEntradaDto.getCuentaOrigen());
-			if (ObjectUtils.isEmpty(cuentaOrigen)) {
-				return new ResponseEntity<>("La cuenta origen proporcionada no existe.", HttpStatus.BAD_REQUEST);
-			}
-			//Validacion que este dentro del limite diario
-			Double sumaDiariaDebito = movimientoService.obtenerSumaValorClienteCuentaFecha(cuentaOrigen.get().getIdCliente(),
-					cuentaOrigen.get().getIdCuenta(), TipoMovimientoEnum.DEBITO.getDescripcion(), new Date());
-			if (limiteDiario <= sumaDiariaDebito.doubleValue() + pagoEntradaDto.getSaldo().doubleValue()) {
-				return new ResponseEntity<>("Cupo diario Excedido", HttpStatus.BAD_REQUEST);
-			}
-			//Valido que la cuenta origen tenga saldo
-			if (BigDecimal.ZERO.compareTo(cuentaOrigen.get().getSaldoInicial()) == 0) {
-				return new ResponseEntity<>("Saldo no disponible", HttpStatus.BAD_REQUEST);
-			}
-			//valido que el movimiento a debitar sea menor o igual que el saldo que se tiene en la cuenta
-			if (pagoEntradaDto.getSaldo().compareTo(cuentaOrigen.get().getSaldoInicial()) > 0) {
-				return new ResponseEntity<>("Saldo no disponible", HttpStatus.BAD_REQUEST);
-			}
-
-			Optional<Cuenta> cuentaDestino = cuentaService.obtenerPorNumeroCuenta(pagoEntradaDto.getCuentaDestino());
-			if (ObjectUtils.isEmpty(cuentaDestino)) {
-				return new ResponseEntity<>("La cuenta destino proporcionada no existe.", HttpStatus.BAD_REQUEST);
-			}
-
-			Optional<Cliente> clienteOrigen = clienteService.obtenerPorId(cuentaOrigen.get().getIdCliente());
-			if (ObjectUtils.isEmpty(clienteOrigen)) {
-				return new ResponseEntity<>("El cliente origen no existe para el id de cuenta consultado.", HttpStatus.BAD_REQUEST);
-			}
-
-			Optional<Cliente> clienteDestino = clienteService.obtenerPorId(cuentaDestino.get().getIdCliente());
-			if (ObjectUtils.isEmpty(clienteDestino)) {
-				return new ResponseEntity<>("El cliente destino no existe para el id de cuenta consultado.", HttpStatus.BAD_REQUEST);
-			}
-
-			Movimiento debito = new Movimiento();
-			debito.setIdCliente(clienteOrigen.get().getClienteId());
-			debito.setIdCuenta(cuentaOrigen.get().getIdCuenta());
-			debito.setNumeroTransaccion(1000L);
-			debito.setValor(pagoEntradaDto.getSaldo());
-			debito.setTipoMovimiento(TipoMovimientoEnum.DEBITO.getDescripcion());
-			debito.setSaldoAnterior(cuentaOrigen.get().getSaldoInicial());
-			debito.setSaldo(debito.getSaldoAnterior().subtract(debito.getValor()));
-			debito.setFecha(new Date());
-			//Guardo el debito
-			Movimiento movimientoOrigenGuardado = movimientoService.create(debito);
-			//Actualizar cuenta origen
-			cuentaOrigen.get().setSaldoInicial(debito.getSaldo());
-			cuentaService.update(cuentaOrigen.get());
-
-			Movimiento credito = new Movimiento();
-			credito.setIdCliente(clienteDestino.get().getClienteId());
-			credito.setIdCuenta(cuentaDestino.get().getIdCuenta());
-			credito.setNumeroTransaccion(1000L);
-			credito.setValor(pagoEntradaDto.getSaldo());
-			credito.setTipoMovimiento(TipoMovimientoEnum.CREDITO.getDescripcion());
-			credito.setSaldoAnterior(cuentaDestino.get().getSaldoInicial());
-			credito.setSaldo(credito.getSaldoAnterior().add(credito.getValor()));
-			credito.setFecha(new Date());
-			//Guardo el credito
-			Movimiento movimientoDestinoGuardado = movimientoService.create(credito);
-			//Actualizar cuanta destino
-			cuentaDestino.get().setSaldoInicial(credito.getSaldo());
-			cuentaService.update(cuentaDestino.get());
-			PagoSalidaDto resultado = new PagoSalidaDto();
-			resultado.setNumeroOperacion(movimientoDestinoGuardado.getNumeroTransaccion());
-			resultado.setSaldoCuentaOrigen(movimientoOrigenGuardado.getSaldo());
-			resultado.setSaldoCuentaDestino(movimientoDestinoGuardado.getSaldo());
-			return new ResponseEntity<PagoSalidaDto>(resultado, HttpStatus.CREATED);
+			return new ResponseEntity<>(responseDto.getErrorMessage(), HttpStatus.BAD_REQUEST);
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);
-			return new ResponseEntity<>("Por favor comuniquese con el administrador", HttpStatus.INTERNAL_SERVER_ERROR);
+			return new ResponseEntity<>("Por favor comuniquese con el administrador. ", HttpStatus.INTERNAL_SERVER_ERROR);
 		}
+	}
+
+	/**
+	 * Validate data request.
+	 * @param paymentInDto, request data.
+	 * @return ResponseDto, Response data.
+	 */
+	private ResponseDto validateDataIn (PaymentInDto paymentInDto)  {
+		ResponseDto response = new ResponseDto();
+		//validacion que los datos de entrada de cuenta origen y cuenta destino no sean vacios o nulos
+		if (ObjectUtils.isEmpty(paymentInDto.getCuentaOrigen()) || ObjectUtils.isEmpty(paymentInDto.getCuentaDestino())) {
+			response.setErrorMessage("Cuenta origen, cuenta destino, monto son obligatorios.");
+			return response;
+		}
+		//validacion que la cuenta de origen no sea la misma de destino
+		if(StringUtils.equalsAnyIgnoreCase(paymentInDto.getCuentaOrigen().toString(),paymentInDto.getCuentaDestino().toString())){
+			response.setErrorMessage("No se puede realizar transacciones entre la misma cuenta.");
+			return response;
+		}
+		// validacion que el monto enviado en los datos de entrada no sea nulo
+		if (ObjectUtils.isEmpty(paymentInDto.getMonto())) {
+			response.setErrorMessage("Monto no existe.");
+			return response;
+		}
+		// validacion que el monto enviado en los datos de entrada no sean cero y que sea positivo
+		if (paymentInDto.getMonto().compareTo(BigDecimal.ZERO) <= 0) {
+			response.setErrorMessage("Monto no puede ser cero o negativo.");
+			return response;
+		}
+		return response;
+	}
+
+	/**
+	 * Validate Source Account.
+	 * @param paymentInDto, data in.
+	 * @return ResponseDto, response object.
+	 */
+	private ResponseDto validateSourceAccount(PaymentInDto paymentInDto){
+		ResponseDto response = new ResponseDto();
+		Optional<Cuenta> cuentaOrigen = cuentaService.obtenerPorNumeroCuenta(paymentInDto.getCuentaOrigen());
+		if (!cuentaOrigen.isPresent()) {
+			response.setErrorMessage("La cuenta origen proporcionada no existe.");
+			return response;
+		}else{
+			response.setCuenta(cuentaOrigen);
+		}
+		//Valido que la cuenta origen tenga saldo
+		if (BigDecimal.ZERO.compareTo(cuentaOrigen.get().getSaldoInicial()) == 0) {
+			response.setErrorMessage("Saldo no disponible en la cuenta origen");
+			return response;
+		}
+		//valido que el movimiento a debitar sea menor o igual que el saldo que se tiene en la cuenta
+		if (paymentInDto.getMonto().compareTo(cuentaOrigen.get().getSaldoInicial()) == 1) {
+			response.setErrorMessage("Saldo no disponible");
+			return response;
+		}
+
+		//Validacion que este dentro del limite diario
+		Double sumaDiariaDebito = movimientoService.obtenerSumaValorClienteCuentaFecha(cuentaOrigen.get().getIdCliente(),
+				cuentaOrigen.get().getIdCuenta(), TipoMovimientoEnum.DEBITO.getDescripcion(), new Date());
+		if (limiteDiario <= sumaDiariaDebito.doubleValue() + paymentInDto.getMonto().doubleValue()) {
+			response.setErrorMessage("Cupo diario excedido");
+			return response;
+		}
+
+		Optional<Cliente> clienteOrigen = clienteService.obtenerPorId(cuentaOrigen.get().getIdCliente());
+		if (!clienteOrigen.isPresent()) {
+			response.setErrorMessage("El cliente origen no existe para el id de cuenta consultado.");
+			return response;
+		}else{
+			response.setCliente(clienteOrigen);
+		}
+		return response;
+	}
+
+	/**
+	 * Validate Destination Account.
+	 * @param paymentInDto, Data in.
+	 * @return ResponseDto, Response Data.
+	 */
+	private ResponseDto validateDestinationAccount(PaymentInDto paymentInDto){
+		ResponseDto response = new ResponseDto();
+		Optional<Cuenta> cuentaDestino = cuentaService.obtenerPorNumeroCuenta(paymentInDto.getCuentaDestino());
+		if (!cuentaDestino.isPresent()) {
+			response.setErrorMessage("La cuenta destino proporcionada no existe.");
+			return response;
+		}else {
+			response.setCuenta(cuentaDestino);
+		}
+		Optional<Cliente> clienteDestino = clienteService.obtenerPorId(cuentaDestino.get().getIdCliente());
+		if (!clienteDestino.isPresent()) {
+			response.setErrorMessage("El cliente destino no existe para el id de cuenta consultado.");
+			return response;
+		}else{
+			response.setCliente(clienteDestino);
+		}
+		return response;
+	}
+
+	/**
+	 * Transaction number is today(yyyyMMddHHmmss) date and concat origin account number.
+	 * @param numberAccount, number account.
+	 * @return String, transaccion number.
+	 */
+	private String getTransactionNumber (Integer numberAccount){
+		LocalDateTime today = LocalDateTime.now();
+		DateTimeFormatter format = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+		return today.format(format).concat(numberAccount.toString());
+	}
+
+	private Boolean validate(PaymentInDto paymentInDto, ResponseDto responseDto){
+		ResponseDto response = validateDataIn(paymentInDto);
+		//Validate data in
+		String message = response.getErrorMessage();
+		if(StringUtils.isNotEmpty(message)){
+			responseDto.setErrorMessage(message);
+			return Boolean.FALSE;
+		}
+		//Validate Source Account
+		response = validateSourceAccount(paymentInDto);
+		message = response.getErrorMessage();
+		if(StringUtils.isNotEmpty(message)){
+			responseDto.setErrorMessage(message);
+			return Boolean.FALSE;
+		}
+		responseDto.setCuentaOrigen(response.getCuenta());
+		responseDto.setClienteOrigen(response.getCliente());
+		//Validate Destination Account
+		response = validateDestinationAccount(paymentInDto);
+		message = response.getErrorMessage();
+		if(StringUtils.isNotEmpty(message)){
+			responseDto.setErrorMessage(message);
+			return Boolean.FALSE;
+		}
+		responseDto.setCuentaDestino(response.getCuenta());
+		responseDto.setClienteDestino(response.getCliente());
+		return Boolean.TRUE;
 	}
 
 	/**
@@ -174,7 +239,7 @@ public class MovimientoController {
 	 *
 	 * @param movimientoEntradaDto
 	 *            parametro de entrada
-	 * @return ResponseEntity<?> lista o mensaje de error
+	 * @return ResponseEntity lista o mensaje de error
 	 */
 	@GetMapping
 	public ResponseEntity<?> obtenerPorClienteCuenta(
