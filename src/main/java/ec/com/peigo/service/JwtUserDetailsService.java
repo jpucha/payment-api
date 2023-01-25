@@ -1,13 +1,14 @@
 package ec.com.peigo.service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
+import ec.com.peigo.controller.payment.dto.UserInDto;
 import ec.com.peigo.model.*;
+import ec.com.peigo.repository.payment.AuthorityRepository;
+import ec.com.peigo.repository.payment.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -18,41 +19,42 @@ import org.springframework.stereotype.Service;
 public class JwtUserDetailsService implements UserDetailsService {
 
     @Autowired
-    private UserDao userDao;
+    private UserRepository userDao;
 
     @Autowired
-    private AuthorityDao autorityDao;
+    private AuthorityRepository autorityDao;
 
     @Autowired
     private PasswordEncoder bcryptEncoder;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        DAOUser user = userDao.findByUsername(username);
+
+        UserDto user = userDao.findByUsername(username);
         if (user == null) {
             throw new UsernameNotFoundException("User not found with username: " + username);
         }
         return new org.springframework.security.core.userdetails.User(user.getUsername(), user.getPassword(),
-                getGrantedAuthorities(user.getAuthorities()));
+                new ArrayList<>());
     }
 
-    private List<GrantedAuthority> getGrantedAuthorities(Set<DAOAuthority> authorities) {
+    private List<GrantedAuthority> getGrantedAuthorities(Set<AuthorityDto> authorities) {
         List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
-        for (DAOAuthority authority : authorities) {
+        for (AuthorityDto authority : authorities) {
             grantedAuthorities.add(new SimpleGrantedAuthority(authority.getName()));
         }
         return grantedAuthorities;
     }
-    public DAOUser save(UserDTO user) {
-        DAOUser newUser = new DAOUser();
-        DAOAuthority rol = new DAOAuthority();
+    public UserDto save(UserInDto user) {
+        UserDto newUser = new UserDto();
+        AuthorityDto rol = new AuthorityDto();
         newUser.setUsername(user.getUsername());
         newUser.setPassword(bcryptEncoder.encode(user.getPassword()));
         newUser = userDao.save(newUser);
         rol.setName(user.getAuthorities().iterator().next().getName());
         rol.setUser(newUser);
         autorityDao.save(rol);
-        Set<DAOAuthority>  rolSet = new HashSet<DAOAuthority>();
+        Set<AuthorityDto>  rolSet = new HashSet<AuthorityDto>();
         rolSet.add(rol);
         newUser.setAuthorities(rolSet);
         return newUser;

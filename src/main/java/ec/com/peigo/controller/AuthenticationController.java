@@ -16,8 +16,8 @@ import ec.com.peigo.service.JwtUserDetailsService;
 
 
 import ec.com.peigo.config.JwtTokenUtil;
-import ec.com.peigo.model.JwtRequest;
-import ec.com.peigo.model.JwtResponse;
+import ec.com.peigo.controller.payment.dto.JwtRequest;
+import ec.com.peigo.controller.payment.dto.JwtResponse;
 
 /**
  * @autor jpucha
@@ -25,7 +25,7 @@ import ec.com.peigo.model.JwtResponse;
  */
 @RestController
 @CrossOrigin
-@RequestMapping("/api/authentication")
+@RequestMapping("/api/auth")
 public class AuthenticationController {
 
     @Autowired
@@ -37,7 +37,7 @@ public class AuthenticationController {
     @Autowired
     private JwtUserDetailsService userDetailsService;
 
-    @RequestMapping(value = "/authenticate", method = RequestMethod.POST)
+    @RequestMapping(value = "/getToken", method = RequestMethod.POST)
     public ResponseEntity<?> createAuthenticationToken(@RequestBody JwtRequest authenticationRequest) throws Exception {
 
         authenticate(authenticationRequest.getUsername(), authenticationRequest.getPassword());

@@ -47,9 +47,6 @@ public class Movimiento implements Serializable {
 	@Column(name = "numero_transaccion")
 	private String numeroTransaccion;
 
-	@Temporal(TemporalType.TIMESTAMP)
-	private Date fecha;
-
 	private BigDecimal saldo;
 
 	@Column(name = "tipo_movimiento")
@@ -60,9 +57,23 @@ public class Movimiento implements Serializable {
 	@Column(name = "saldo_anterior")
 	private BigDecimal saldoAnterior;
 
+	@Column(name = "fecha_registro")
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date fechaRegistro;
+
+	@Column(name = "usuario_registro")
+	private String usuarioRegistro;
+
+	@Column(name = "fecha_modificacion")
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date fechaModificacion;
+
+	@Column(name = "usuario_modificacion")
+	private String usuarioModificacion;
+
 	// bi-directional many-to-one association to Cliente
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "idCliente", insertable = false, updatable = false)
+	@JoinColumn(name = "idCliente", insertable = false, updatable = false, nullable = false)
 	@JsonIgnore
 	private Cliente cliente;
 
@@ -71,7 +82,7 @@ public class Movimiento implements Serializable {
 
 	// bi-directional many-to-one association to Cuenta
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "id_cuenta", insertable = false, updatable = false)
+	@JoinColumn(name = "id_cuenta", insertable = false, updatable = false, nullable = false)
 	@JsonIgnore
 	private Cuenta cuenta;
 

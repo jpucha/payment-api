@@ -44,6 +44,8 @@ public class MovimientoServiceImpl implements MovimientoService {
 
 	private static final Logger log = LoggerFactory.getLogger(MovimientoServiceImpl.class);
 
+	public static final String USER_MOD = "peigoadmin";
+
 	@Autowired
 	private MovimientoRepository movimientoRepository;
 
@@ -153,7 +155,8 @@ public class MovimientoServiceImpl implements MovimientoService {
 			}else{
 				transaction.setSaldo(transaction.getSaldoAnterior().add(transaction.getValor()));
 			}
-			transaction.setFecha(new Date());
+			transaction.setFechaRegistro(new Date());
+			transaction.setUsuarioRegistro(USER_MOD);
 			//save debito
 			transaction = create(transaction);
 			return transaction;

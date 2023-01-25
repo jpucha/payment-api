@@ -52,18 +52,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity httpSecurity) throws Exception {
         // We don't need CSRF for this example
         httpSecurity.csrf().disable()
-                .authorizeRequests()
-                .antMatchers("/api/clientes/").hasRole("ADMIN")
-                .antMatchers("/api/cuentas/").hasRole("CUSTOMER")
-                .antMatchers("/api/").hasRole("ADMIN")
-                .antMatchers("/api/paymentTransaction/").hasRole("CUSTOMER")
-                .antMatchers("/api/authentication/").hasRole("ADMIN")
-                .antMatchers("/api/user/").hasRole("ADMIN")
-                .antMatchers("/hello/").hasRole("ADMIN")
-                .and()
+                // dont authenticate this particular request
+                .authorizeRequests().anyRequest().permitAll().and().
+                // all other requests need to be authenticated
+                        //anyRequest().authenticated().and().
                 // make sure we use stateless session; session won't be used to
                 // store user's state.
-                .exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint).and().sessionManagement()
+                        exceptionHandling().authenticationEntryPoint(jwtAuthenticationEntryPoint).and().sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS);
 
         // Add a filter to validate the tokens with every request

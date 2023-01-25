@@ -102,7 +102,7 @@ public class ClienteController {
 			if (clienteEncontrado.isPresent()) {
 				return new ResponseEntity<Cliente>(clienteEncontrado.get(), HttpStatus.OK);
 			} else {
-				return new ResponseEntity<>("No existe clientes con el parametro", HttpStatus.BAD_REQUEST);
+				return new ResponseEntity<>("Cliente no existe.", HttpStatus.BAD_REQUEST);
 			}
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);

@@ -53,6 +53,8 @@ public class MovimientoController {
 
 	private static final Logger log = LoggerFactory.getLogger(MovimientoController.class);
 
+	public static final String USER_MOD = "peigoadmin2";
+
 	private static final int limiteDiario = 1000;
 
 	@Autowired
@@ -298,7 +300,8 @@ public class MovimientoController {
 				SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 
 				Date date = formatter.parse(movimientoEntradaDto.getFecha());
-				movimiento.setFecha(date);
+				movimiento.setFechaModificacion(date);
+				movimiento.setUsuarioModificacion(USER_MOD);
 				Movimiento movimientoGuardado = movimientoService.update(movimiento);
 				return new ResponseEntity<Movimiento>(movimientoGuardado, HttpStatus.OK);
 			}

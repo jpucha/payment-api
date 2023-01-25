@@ -1,4 +1,4 @@
-package ec.com.peigo.model;
+package ec.com.peigo.controller.payment.dto;
 
 import lombok.Data;
 

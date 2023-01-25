@@ -1,6 +1,5 @@
 package ec.com.peigo.model;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,7 +9,7 @@ import javax.persistence.*;
 @Setter
 @Entity
 @Table(name = "authorities")
-public class DAOAuthority {
+public class AuthorityDto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,6 +19,6 @@ public class DAOAuthority {
 
     @ManyToOne
     @JoinColumn(name = "id")
-    private DAOUser user;
+    private UserDto user;
 
 }

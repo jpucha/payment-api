@@ -1,7 +1,6 @@
 package ec.com.peigo.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,17 +11,17 @@ import java.util.Set;
 @Setter
 @Entity
 @Table(name = "user")
-public class DAOUser {
+public class UserDto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column
+    @Column(unique = true)
     private String username;
     @Column
     @JsonIgnore
     private String password;
     @JsonIgnore
     @OneToMany(mappedBy="user",fetch=FetchType.EAGER)
-    private Set<DAOAuthority> authorities;
+    private Set<AuthorityDto> authorities;
 }
