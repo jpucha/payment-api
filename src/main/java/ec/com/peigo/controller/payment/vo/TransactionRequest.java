@@ -1,7 +1,7 @@
 /**
  * 
  */
-package ec.com.peigo.controller.payment.dto;
+package ec.com.peigo.controller.payment.vo;
 
 import lombok.Data;
 

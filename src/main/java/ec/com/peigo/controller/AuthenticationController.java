@@ -16,8 +16,8 @@ import ec.com.peigo.service.JwtUserDetailsService;
 
 
 import ec.com.peigo.config.JwtTokenUtil;
-import ec.com.peigo.controller.payment.dto.JwtRequest;
-import ec.com.peigo.controller.payment.dto.JwtResponse;
+import ec.com.peigo.controller.payment.vo.JwtRequest;
+import ec.com.peigo.controller.payment.vo.JwtResponse;
 
 /**
  * @autor jpucha

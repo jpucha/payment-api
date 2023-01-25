@@ -1,4 +1,4 @@
-package ec.com.peigo.controller.payment.dto;
+package ec.com.peigo.controller.payment.vo;
 
 import ec.com.peigo.model.AuthorityDto;
 import lombok.Data;

@@ -79,6 +79,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
+    /**
+     * Get Granted Authorities
+     * @param authorities
+     * @return
+     */
     private List<GrantedAuthority> getGrantedAuthorities(Set<AuthorityDto> authorities) {
         List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
         for (AuthorityDto authority : authorities) {

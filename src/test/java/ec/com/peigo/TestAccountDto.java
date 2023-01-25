@@ -26,7 +26,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 
 import ec.com.peigo.enumeration.StateEmun;
-import ec.com.peigo.model.payment.Cuenta;
+import ec.com.peigo.model.payment.AccountDto;
 
 import io.restassured.response.ValidatableResponse;
 
@@ -43,7 +43,7 @@ import io.restassured.response.ValidatableResponse;
 @TestInstance(Lifecycle.PER_CLASS)
 @ActiveProfiles({ "integration" })
 @TestMethodOrder(OrderAnnotation.class)
-public class TestCuenta {
+public class TestAccountDto {
 
 	public static final String TIPO_CUENTA_AHORRO = "Ahorro";
 
@@ -73,15 +73,15 @@ public class TestCuenta {
 	@Order(2)
 	public void post_nuevaCuenta_returnsNuevaCuenta_200() {
 		
-		Cuenta cuenta = new Cuenta();
+		AccountDto accountDto = new AccountDto();
 		
-		cuenta.setTipoCuenta(TIPO_CUENTA_AHORRO);
-		cuenta.setSaldoInicial(BigDecimal.valueOf(100));
-		cuenta.setEstado(StateEmun.ACTIVO.getDescripcion());
-		cuenta.setIdCliente(1L);
+		accountDto.setTipoCuenta(TIPO_CUENTA_AHORRO);
+		accountDto.setSaldoInicial(BigDecimal.valueOf(100));
+		accountDto.setState(StateEmun.ACTIVO.getDescripcion());
+		accountDto.setIdCliente(1L);
 
 		ValidatableResponse response = given().contentType(MediaType.APPLICATION_JSON_VALUE)
-				.accept(MediaType.APPLICATION_JSON_VALUE).body(cuenta).when().post("").then();
+				.accept(MediaType.APPLICATION_JSON_VALUE).body(accountDto).when().post("").then();
 
 		System.out.println(
 				"'post_nuevaCuenta_returnsNuevaCuenta_200()' response:\n" + response.extract().asString());

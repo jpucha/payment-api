@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * 
- * <b> Clase entidad de la tabla cuenta. </b>
+ * <b> Entity class to table account. </b>
  * 
  * @author jpucha
  * @version $Revision: 1.0 $
@@ -36,41 +36,41 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Setter
 @DynamicUpdate
 @Entity
-@NamedQuery(name = "Cuenta.findAll", query = "SELECT c FROM Cuenta c")
-public class Cuenta implements Serializable {
+@NamedQuery(name = "AccountDto.findAll", query = "SELECT c FROM AccountDto c")
+public class AccountDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "id_cuenta")
-	private Long idCuenta;
+	@Column(name = "id_account")
+	private Long idAccount;
 
 	@NotNull
-	private String estado;
+	private String state;
 
 	@Column(unique = true)
 	@NotNull
-	private int numero;
+	private int number;
 
-	@Column(name = "saldo_inicial")
+	@Column(name = "balance")
 	@NotNull
-	private BigDecimal saldoInicial;
+	private BigDecimal balance;
 
-	@Column(name = "tipo_cuenta")
-	private String tipoCuenta;
+	@Column(name = "account_type")
+	private String accountType;
 
-	// bi-directional many-to-one association to Cliente
+	// bi-directional many-to-one association to ClientDto
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "id_cliente", insertable = false, updatable = false)
+	@JoinColumn(name = "id_client", insertable = false, updatable = false)
 	@JsonIgnore
-	private Cliente cliente;
+	private ClientDto clientDto;
 
-	// bi-directional many-to-one association to Movimiento
-	@OneToMany(mappedBy = "cuenta")
+	// bi-directional many-to-one association to PaymentTransactionDto
+	@OneToMany(mappedBy = "accountDto")
 	@JsonIgnore
-	private List<Movimiento> movimientos;
+	private List<PaymentTransactionDto> paymentTransactionDtos;
 
 	@NotNull
-	@Column(name = "id_cliente")
-	private Long idCliente;
+	@Column(name = "id_client")
+	private Long idClient;
 }

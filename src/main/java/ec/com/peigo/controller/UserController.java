@@ -1,6 +1,6 @@
 package ec.com.peigo.controller;
 
-import ec.com.peigo.controller.payment.dto.UserRequest;
+import ec.com.peigo.controller.payment.vo.UserRequest;
 import ec.com.peigo.service.JwtUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

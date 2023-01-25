@@ -9,8 +9,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import ec.com.peigo.controller.payment.dto.PaymentRequest;
-import ec.com.peigo.controller.payment.dto.ResponseAccountClient;
+import ec.com.peigo.controller.payment.vo.PaymentRequest;
+import ec.com.peigo.controller.payment.vo.ResponseAccountClient;
+import ec.com.peigo.model.payment.PaymentTransactionDto;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,14 +29,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import ec.com.peigo.controller.payment.dto.TransactionRequest;
+import ec.com.peigo.controller.payment.vo.TransactionRequest;
 import ec.com.peigo.enumeration.TransactionTypeEnum;
-import ec.com.peigo.model.payment.Cliente;
-import ec.com.peigo.model.payment.Cuenta;
-import ec.com.peigo.model.payment.Movimiento;
-import ec.com.peigo.service.payment.ClienteService;
-import ec.com.peigo.service.payment.CuentaService;
-import ec.com.peigo.service.payment.MovimientoService;
+import ec.com.peigo.model.payment.ClientDto;
+import ec.com.peigo.model.payment.AccountDto;
+import ec.com.peigo.service.payment.ClientService;
+import ec.com.peigo.service.payment.AccountService;
+import ec.com.peigo.service.payment.PaymentTransactionService;
 
 /**
  * 
@@ -58,13 +58,13 @@ public class PaymentController {
 	private static final int limiteDiario = 1000;
 
 	@Autowired
-	private MovimientoService movimientoService;
+	private PaymentTransactionService paymentTransactionService;
 
 	@Autowired
-	private ClienteService clienteService;
+	private ClientService clientService;
 
 	@Autowired
-	private CuentaService cuentaService;
+	private AccountService accountService;
 
 	/**
 	 * 
@@ -85,8 +85,8 @@ public class PaymentController {
 			//validations
 			if(validate(paymentInDto, responseAccountClient)){
 				//Get transaction number.
-				String transactionNumber = getTransactionNumber(responseAccountClient.getCuentaOrigen().get().getNumero());
-				return movimientoService.createPaymentTransaction(responseAccountClient,paymentInDto,transactionNumber);
+				String transactionNumber = getTransactionNumber(responseAccountClient.getCuentaOrigen().get().getNumber());
+				return paymentTransactionService.createPaymentTransaction(responseAccountClient,paymentInDto,transactionNumber);
 			}
 			return new ResponseEntity<>(responseAccountClient.getErrorMessage(), HttpStatus.BAD_REQUEST);
 		} catch (Exception e) {
@@ -104,7 +104,7 @@ public class PaymentController {
 		ResponseAccountClient response = new ResponseAccountClient();
 		//validacion que los datos de entrada de cuenta origen y cuenta destino no sean vacios o nulos
 		if (ObjectUtils.isEmpty(paymentInDto.getCuentaOrigen()) || ObjectUtils.isEmpty(paymentInDto.getCuentaDestino())) {
-			response.setErrorMessage("Cuenta origen, cuenta destino, monto son obligatorios.");
+			response.setErrorMessage("AccountDto origen, cuenta destino, monto son obligatorios.");
 			return response;
 		}
 		//validacion que la cuenta de origen no sea la misma de destino
@@ -132,7 +132,7 @@ public class PaymentController {
 	 */
 	private ResponseAccountClient validateSourceAccount(PaymentRequest paymentInDto){
 		ResponseAccountClient response = new ResponseAccountClient();
-		Optional<Cuenta> cuentaOrigen = cuentaService.obtenerPorNumeroCuenta(paymentInDto.getCuentaOrigen());
+		Optional<AccountDto> cuentaOrigen = accountService.getByAccountNumber(paymentInDto.getCuentaOrigen());
 		if (!cuentaOrigen.isPresent()) {
 			response.setErrorMessage("La cuenta origen proporcionada no existe.");
 			return response;
@@ -140,25 +140,25 @@ public class PaymentController {
 			response.setCuenta(cuentaOrigen);
 		}
 		//Valido que la cuenta origen tenga saldo
-		if (BigDecimal.ZERO.compareTo(cuentaOrigen.get().getSaldoInicial()) == 0) {
+		if (BigDecimal.ZERO.compareTo(cuentaOrigen.get().getBalance()) == 0) {
 			response.setErrorMessage("Saldo no disponible en la cuenta origen");
 			return response;
 		}
 		//valido que el movimiento a debitar sea menor o igual que el saldo que se tiene en la cuenta
-		if (paymentInDto.getMonto().compareTo(cuentaOrigen.get().getSaldoInicial()) == 1) {
+		if (paymentInDto.getMonto().compareTo(cuentaOrigen.get().getBalance()) == 1) {
 			response.setErrorMessage("Saldo no disponible");
 			return response;
 		}
 
 		//Validacion que este dentro del limite diario
-		Double sumaDiariaDebito = movimientoService.obtenerSumaValorClienteCuentaFecha(cuentaOrigen.get().getIdCliente(),
-				cuentaOrigen.get().getIdCuenta(), TransactionTypeEnum.DEBITO.getDescripcion(), new Date());
+		Double sumaDiariaDebito = paymentTransactionService.getSumAmountByClientAccountDate(cuentaOrigen.get().getIdClient(),
+				cuentaOrigen.get().getIdAccount(), TransactionTypeEnum.DEBITO.getDescripcion(), new Date());
 		if (limiteDiario <= sumaDiariaDebito.doubleValue() + paymentInDto.getMonto().doubleValue()) {
 			response.setErrorMessage("Cupo diario excedido");
 			return response;
 		}
 
-		Optional<Cliente> clienteOrigen = clienteService.obtenerPorId(cuentaOrigen.get().getIdCliente());
+		Optional<ClientDto> clienteOrigen = clientService.getById(cuentaOrigen.get().getIdClient());
 		if (!clienteOrigen.isPresent()) {
 			response.setErrorMessage("El cliente origen no existe para el id de cuenta consultado.");
 			return response;
@@ -175,14 +175,14 @@ public class PaymentController {
 	 */
 	private ResponseAccountClient validateDestinationAccount(PaymentRequest paymentInDto){
 		ResponseAccountClient response = new ResponseAccountClient();
-		Optional<Cuenta> cuentaDestino = cuentaService.obtenerPorNumeroCuenta(paymentInDto.getCuentaDestino());
+		Optional<AccountDto> cuentaDestino = accountService.getByAccountNumber(paymentInDto.getCuentaDestino());
 		if (!cuentaDestino.isPresent()) {
 			response.setErrorMessage("La cuenta destino proporcionada no existe.");
 			return response;
 		}else {
 			response.setCuenta(cuentaDestino);
 		}
-		Optional<Cliente> clienteDestino = clienteService.obtenerPorId(cuentaDestino.get().getIdCliente());
+		Optional<ClientDto> clienteDestino = clientService.getById(cuentaDestino.get().getIdClient());
 		if (!clienteDestino.isPresent()) {
 			response.setErrorMessage("El cliente destino no existe para el id de cuenta consultado.");
 			return response;
@@ -253,22 +253,23 @@ public class PaymentController {
 				return new ResponseEntity<>("La identificación y el número de cuenta son obligatorios",
 						HttpStatus.BAD_REQUEST);
 			}
-			Optional<Cliente> cliente = clienteService
-					.obtenerPorIdentificacion(movimientoEntradaDto.getIdentificacion());
+			Optional<ClientDto> cliente = clientService
+					.getByIdentification(movimientoEntradaDto.getIdentificacion());
 			if (ObjectUtils.isEmpty(cliente)) {
 				return new ResponseEntity<>("El cliente no existe con la identificación", HttpStatus.BAD_REQUEST);
 			}
-			Optional<Cuenta> cuenta = cuentaService.obtenerPorNumeroCuenta(movimientoEntradaDto.getNumeroCuenta());
+			Optional<AccountDto> cuenta = accountService.getByAccountNumber(movimientoEntradaDto.getNumeroCuenta());
 			if (ObjectUtils.isEmpty(cuenta)) {
 				return new ResponseEntity<>("La cuenta no existe con el número de cuenta", HttpStatus.BAD_REQUEST);
 			}
 
-			List<Movimiento> listadoMovimiento = movimientoService.obtenerPorClienteCuenta(cliente.get().getClienteId(),
-					cuenta.get().getIdCuenta());
-			if (null == listadoMovimiento || listadoMovimiento.isEmpty()) {
+			List<PaymentTransactionDto> listadoPaymentTransactionDto = paymentTransactionService.getByClientAccount(cliente.get()
+							.getIdClient(),
+					cuenta.get().getIdAccount());
+			if (null == listadoPaymentTransactionDto || listadoPaymentTransactionDto.isEmpty()) {
 				return new ResponseEntity<>("No existen movimientos con lo parametros indicados.", HttpStatus.OK);
 			} else {
-				return new ResponseEntity<List<Movimiento>>(listadoMovimiento, HttpStatus.OK);
+				return new ResponseEntity<List<PaymentTransactionDto>>(listadoPaymentTransactionDto, HttpStatus.OK);
 			}
 
 		} catch (Exception e) {
@@ -294,16 +295,16 @@ public class PaymentController {
 			if (ObjectUtils.isEmpty(movimientoEntradaDto.getIdMovimiento())) {
 				return new ResponseEntity<>("El id del movimiento es obligatorio", HttpStatus.BAD_REQUEST);
 			}
-			Optional<Movimiento> movimientoEncontrado = movimientoService.obtenerPorId(movimientoEntradaDto.getIdMovimiento());
+			Optional<PaymentTransactionDto> movimientoEncontrado = paymentTransactionService.getById(movimientoEntradaDto.getIdMovimiento());
 			if (movimientoEncontrado.isPresent()) {
-				Movimiento movimiento = movimientoEncontrado.get();
+				PaymentTransactionDto paymentTransactionDto = movimientoEncontrado.get();
 				SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
 
 				Date date = formatter.parse(movimientoEntradaDto.getFecha());
-				movimiento.setFechaModificacion(date);
-				movimiento.setUsuarioModificacion(USER_MOD);
-				Movimiento movimientoGuardado = movimientoService.update(movimiento);
-				return new ResponseEntity<Movimiento>(movimientoGuardado, HttpStatus.OK);
+				paymentTransactionDto.setModificateDate(new Date());
+				paymentTransactionDto.setModificateUser(USER_MOD);
+				PaymentTransactionDto paymentTransactionDtoGuardado = paymentTransactionService.update(paymentTransactionDto);
+				return new ResponseEntity<PaymentTransactionDto>(paymentTransactionDtoGuardado, HttpStatus.OK);
 			}
 			return new ResponseEntity<>("No se encuentra en movimiento", HttpStatus.BAD_REQUEST);
 
@@ -331,9 +332,9 @@ public class PaymentController {
 			if (ObjectUtils.isEmpty(id)) {
 				return new ResponseEntity<>("El id del movimiento es obligatorio", HttpStatus.BAD_REQUEST);
 			}
-			Optional<Movimiento> movimientoEncontrado = movimientoService.obtenerPorId(id);
+			Optional<PaymentTransactionDto> movimientoEncontrado = paymentTransactionService.getById(id);
 			if (movimientoEncontrado.isPresent()) {
-				movimientoService.delete(id);
+				paymentTransactionService.delete(id);
 				return new ResponseEntity<>("Registro Eliminado", HttpStatus.OK);
 			}
 			return new ResponseEntity<String>(

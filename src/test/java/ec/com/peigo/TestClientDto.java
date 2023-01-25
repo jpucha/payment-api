@@ -3,6 +3,7 @@
  */
 package ec.com.peigo;
 
+import ec.com.peigo.model.payment.ClientDto;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-import ec.com.peigo.model.payment.Cliente;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -35,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, classes = PaymentApiApplicationTests.class)
 @TestMethodOrder(OrderAnnotation.class)
-public class TestCliente {
+public class TestClientDto {
 
 	@Autowired
 	private TestRestTemplate restTemplate;
@@ -46,17 +46,17 @@ public class TestCliente {
 	@Test
 	@Order(1)
 	public void post_createNewClient_Returns_201_Created() throws JsonProcessingException {
-		Cliente cliente = new Cliente();
-		cliente.setClienteId(1L);
-		cliente.setNombre("Susana Gonzalez");
-		cliente.setGenero("F");
-		cliente.setEdad(54);
-		cliente.setIdentificacion("1712312312");
-		cliente.setDireccion("Av. Colon y Av. 6 de diciembre");
-		cliente.setTelefono(909090909);
-		cliente.setContrasena("1234");
-		cliente.setEstado(Boolean.TRUE.toString());
-		HttpEntity<String> entity = getStringHttpEntity(cliente);
+		ClientDto clientDto = new ClientDto();
+		clientDto.setClienteId(1L);
+		clientDto.setNombre("Susana Gonzalez");
+		clientDto.setGenero("F");
+		clientDto.setEdad(54);
+		clientDto.setIdentificacion("1712312312");
+		clientDto.setDireccion("Av. Colon y Av. 6 de diciembre");
+		clientDto.setTelefono(909090909);
+		clientDto.setContrasena("1234");
+		clientDto.setEstado(Boolean.TRUE.toString());
+		HttpEntity<String> entity = getStringHttpEntity(clientDto);
 		ResponseEntity<String> response = restTemplate.postForEntity("/api/clientes", entity, String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 

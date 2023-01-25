@@ -19,7 +19,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * 
- * <b> Clase entidad de la tabla cliente. </b>
+ * <b> Entity class to table client. </b>
  * 
  * @author jpucha
  * @version $Revision: 1.0 $
@@ -31,24 +31,24 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Setter
 @DynamicUpdate
 @Entity
-@NamedQuery(name = "Cliente.findAll", query = "SELECT c FROM Cliente c")
-public class Cliente extends Persona implements Serializable {
+@NamedQuery(name = "ClientDto.findAll", query = "SELECT c FROM ClientDto c")
+public class ClientDto extends PersonDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "cliente_Id")
-	private Long clienteId;
+	@Column(name = "id_client")
+	private Long idClient;
 
-	private String contrasena;
+	private String password;
 
-	private String estado;
+	private String state;
 
-	@OneToMany(mappedBy = "cliente")
+	@OneToMany(mappedBy = "clientDto")
 	@JsonIgnore
-	private List<Cuenta> cuentas;
+	private List<AccountDto> accountDtos;
 
-	@OneToMany(mappedBy = "cliente")
+	@OneToMany(mappedBy = "clientDto")
 	@JsonIgnore
-	private List<Movimiento> movimientos;
+	private List<PaymentTransactionDto> paymentTransactionDtos;
 }

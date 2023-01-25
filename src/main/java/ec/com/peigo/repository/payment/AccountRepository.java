@@ -6,13 +6,12 @@ package ec.com.peigo.repository.payment;
 import java.util.List;
 import java.util.Optional;
 
+import ec.com.peigo.model.payment.AccountDto;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import ec.com.peigo.model.payment.Cuenta;
 
 /**
  * 
- * <b> Interfaz del repositorio del Cuenta. </b>
+ * <b> Interfaz del repositorio del AccountDto. </b>
  * 
  * @author jpucha
  * @version $Revision: 1.0 $
@@ -20,9 +19,9 @@ import ec.com.peigo.model.payment.Cuenta;
  *          [$Author: jpucha $, $Date: 22 ene. 2023 $]
  *          </p>
  */
-public interface CuentaRepository extends JpaRepository<Cuenta, Long> {
+public interface AccountRepository extends JpaRepository<AccountDto, Long> {
 
-	List<Cuenta> findByIdCliente(Long id);
+	List<AccountDto> findByIdClient(Long id);
 
-	Optional<Cuenta> findByNumero(int numero);
+	Optional<AccountDto> findByNumber(int number);
 }

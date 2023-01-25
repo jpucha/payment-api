@@ -5,6 +5,7 @@ package ec.com.peigo.controller.payment;
 
 import java.util.Optional;
 
+import ec.com.peigo.model.payment.ClientDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +22,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import ec.com.peigo.controller.payment.dto.ClientRequestVo;
-import ec.com.peigo.model.payment.Cliente;
-import ec.com.peigo.service.payment.ClienteService;
+import ec.com.peigo.controller.payment.vo.ClientRequest;
+import ec.com.peigo.service.payment.ClientService;
 
 /**
  * 
@@ -41,7 +41,7 @@ public class ClientController {
 	private static final Logger log = LoggerFactory.getLogger(ClientController.class);
 
 	@Autowired
-	private ClienteService service;
+	private ClientService service;
 
 	/**
 	 * 
@@ -55,27 +55,27 @@ public class ClientController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PostMapping
-	public ResponseEntity<?> create(@Validated @RequestBody ClientRequestVo clienteEntradaDto) {
+	public ResponseEntity<?> create(@Validated @RequestBody ClientRequest clienteEntradaDto) {
 		try {
 
-			Optional<Cliente> clienteEncontrado = service
-					.obtenerPorIdentificacion(clienteEntradaDto.getIdentificacion());
+			Optional<ClientDto> clienteEncontrado = service
+					.getByIdentification(clienteEntradaDto.getIdentificacion());
 			if (clienteEncontrado.isPresent()) {
 				return new ResponseEntity<>(
-						"Cliente ya se encuentra registrado es estado: " + clienteEncontrado.get().getEstado(),
+						"ClientDto ya se encuentra registrado es estado: " + clienteEncontrado.get().getState(),
 						HttpStatus.BAD_REQUEST);
 			} else {
-				Cliente cliente = new Cliente();
-				cliente.setNombre(clienteEntradaDto.getNombre());
-				cliente.setGenero(clienteEntradaDto.getGenero());
-				cliente.setEdad(clienteEntradaDto.getEdad());
-				cliente.setIdentificacion(clienteEntradaDto.getIdentificacion());
-				cliente.setDireccion(clienteEntradaDto.getDireccion());
-				cliente.setTelefono(clienteEntradaDto.getTelefono());
-				cliente.setContrasena(clienteEntradaDto.getContrasena());
-				cliente.setEstado(Boolean.TRUE.toString());
-				Cliente clienteGuardado = service.create(cliente);
-				return new ResponseEntity<Cliente>(clienteGuardado, HttpStatus.CREATED);
+				ClientDto clientDto = new ClientDto();
+				clientDto.setName(clienteEntradaDto.getNombre());
+				clientDto.setGender(clienteEntradaDto.getGenero());
+				clientDto.setAge(clienteEntradaDto.getEdad());
+				clientDto.setIdentification(clienteEntradaDto.getIdentificacion());
+				clientDto.setAddress(clienteEntradaDto.getDireccion());
+				clientDto.setPhoneNumber(clienteEntradaDto.getTelefono());
+				clientDto.setPassword(clienteEntradaDto.getContrasena());
+				clientDto.setState(Boolean.TRUE.toString());
+				ClientDto clientDtoGuardado = service.create(clientDto);
+				return new ResponseEntity<ClientDto>(clientDtoGuardado, HttpStatus.CREATED);
 			}
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);
@@ -95,14 +95,14 @@ public class ClientController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@GetMapping
-	public ResponseEntity<?> obtenerCliente(@Validated @RequestBody ClientRequestVo clienteEntradaDto) {
+	public ResponseEntity<?> obtenerCliente(@Validated @RequestBody ClientRequest clienteEntradaDto) {
 		try {
-			Optional<Cliente> clienteEncontrado = service
-					.obtenerPorIdentificacion(clienteEntradaDto.getIdentificacion());
+			Optional<ClientDto> clienteEncontrado = service
+					.getByIdentification(clienteEntradaDto.getIdentificacion());
 			if (clienteEncontrado.isPresent()) {
-				return new ResponseEntity<Cliente>(clienteEncontrado.get(), HttpStatus.OK);
+				return new ResponseEntity<ClientDto>(clienteEncontrado.get(), HttpStatus.OK);
 			} else {
-				return new ResponseEntity<>("Cliente no existe.", HttpStatus.BAD_REQUEST);
+				return new ResponseEntity<>("ClientDto no existe.", HttpStatus.BAD_REQUEST);
 			}
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);
@@ -122,30 +122,30 @@ public class ClientController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PutMapping
-	public ResponseEntity<?> update(@Validated @RequestBody ClientRequestVo clienteEntradaDto) {
+	public ResponseEntity<?> update(@Validated @RequestBody ClientRequest clienteEntradaDto) {
 		try {
-			Optional<Cliente> clienteEncontrado = null;
+			Optional<ClientDto> clienteEncontrado = null;
 			if (!ObjectUtils.isEmpty(clienteEntradaDto.getIdentificacion())) {
-				clienteEncontrado = service.obtenerPorIdentificacion(clienteEntradaDto.getIdentificacion());
+				clienteEncontrado = service.getByIdentification(clienteEntradaDto.getIdentificacion());
 			} else {
-				clienteEncontrado = service.obtenerPorId(clienteEntradaDto.getIdCliente());
+				clienteEncontrado = service.getById(clienteEntradaDto.getIdCliente());
 			}
 
 			if (null != clienteEncontrado && clienteEncontrado.isPresent()) {
-				Cliente cliente = clienteEncontrado.get();
-				cliente.setNombre(clienteEntradaDto.getNombre());
-				cliente.setGenero(clienteEntradaDto.getGenero());
-				cliente.setEdad(clienteEntradaDto.getEdad());
-				cliente.setIdentificacion(clienteEntradaDto.getIdentificacion());
-				cliente.setDireccion(clienteEntradaDto.getDireccion());
-				cliente.setTelefono(clienteEntradaDto.getTelefono());
-				cliente.setContrasena(clienteEntradaDto.getContrasena());
-				cliente.setEstado(clienteEntradaDto.getEstado());
-				Cliente clienteGuardado = service.update(cliente);
-				return new ResponseEntity<Cliente>(clienteGuardado, HttpStatus.OK);
+				ClientDto clientDto = clienteEncontrado.get();
+				clientDto.setName(clienteEntradaDto.getNombre());
+				clientDto.setGender(clienteEntradaDto.getGenero());
+				clientDto.setAge(clienteEntradaDto.getEdad());
+				clientDto.setIdentification(clienteEntradaDto.getIdentificacion());
+				clientDto.setAddress(clienteEntradaDto.getDireccion());
+				clientDto.setPhoneNumber(clienteEntradaDto.getTelefono());
+				clientDto.setPassword(clienteEntradaDto.getContrasena());
+				clientDto.setState(clienteEntradaDto.getEstado());
+				ClientDto clientDtoGuardado = service.update(clientDto);
+				return new ResponseEntity<ClientDto>(clientDtoGuardado, HttpStatus.OK);
 
 			} else {
-				return new ResponseEntity<>("Cliente no se encuentra registrado", HttpStatus.CREATED);
+				return new ResponseEntity<>("ClientDto no se encuentra registrado", HttpStatus.CREATED);
 			}
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);
@@ -168,7 +168,7 @@ public class ClientController {
 	public ResponseEntity<?> delete(@PathVariable("id") Long id) {
 		try {
 
-			Optional<Cliente> personaEncontrada = service.obtenerPorId(id);
+			Optional<ClientDto> personaEncontrada = service.getById(id);
 			if (personaEncontrada.isPresent()) {
 				service.delete(id);
 				return new ResponseEntity<>("Registro Eliminado", HttpStatus.OK);

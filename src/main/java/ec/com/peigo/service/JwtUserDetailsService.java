@@ -2,7 +2,7 @@ package ec.com.peigo.service;
 
 import java.util.*;
 
-import ec.com.peigo.controller.payment.dto.UserRequest;
+import ec.com.peigo.controller.payment.vo.UserRequest;
 import ec.com.peigo.model.*;
 import ec.com.peigo.repository.payment.AuthorityRepository;
 import ec.com.peigo.repository.payment.UserRepository;

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package ec.com.peigo.controller.payment.dto;
+package ec.com.peigo.controller.payment.vo;
 
 import lombok.Data;
 
@@ -16,7 +16,7 @@ import lombok.Data;
  *          </p>
  */
 @Data
-public class ClientRequestVo {
+public class ClientRequest {
 
 	private String identificacion;
 	private String contrasena;

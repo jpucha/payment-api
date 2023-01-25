@@ -5,9 +5,8 @@ package ec.com.peigo.repository.payment;
 
 import java.util.Optional;
 
+import ec.com.peigo.model.payment.ClientDto;
 import org.springframework.data.jpa.repository.JpaRepository;
-
-import ec.com.peigo.model.payment.Cliente;
 
 /**
  * 
@@ -19,12 +18,12 @@ import ec.com.peigo.model.payment.Cliente;
  *          [$Author: jpucha $, $Date: 22 ene. 2023 $]
  *          </p>
  */
-public interface ClienteRepository extends JpaRepository<Cliente, Long> {
+public interface ClientRepository extends JpaRepository<ClientDto, Long> {
 
-	Optional<Cliente> findByEstadoAndClienteId(String estado, Long id);
+	Optional<ClientDto> findByStateAndIdClient(String estado, Long id);
 
-	Optional<Cliente> findByClienteId(Long id);
+	Optional<ClientDto> findByIdClient(Long id);
 
-	Optional<Cliente> findByIdentificacion(String id);
+	Optional<ClientDto> findByIdentification(String id);
 
 }

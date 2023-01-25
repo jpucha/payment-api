@@ -20,18 +20,18 @@ import javax.persistence.MappedSuperclass;
 @Getter
 @Setter
 @MappedSuperclass
-public class Persona implements Serializable {
+public class PersonDto implements Serializable {
 	private static final long serialVersionUID = 1L;
 
-	private String direccion;
+	private String address;
 
-	private int edad;
+	private int age;
 
-	private String genero;
+	private String gender;
 
-	private String identificacion;
+	private String identification;
 
-	private String nombre;
+	private String name;
 
-	private int telefono;
+	private int phoneNumber;
 }

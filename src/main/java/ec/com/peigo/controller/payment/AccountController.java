@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import ec.com.peigo.model.payment.AccountDto;
+import ec.com.peigo.model.payment.ClientDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,12 +25,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import ec.com.peigo.controller.payment.dto.AccountRequestVo;
+import ec.com.peigo.controller.payment.vo.AccountRequest;
 import ec.com.peigo.enumeration.StateEmun;
-import ec.com.peigo.model.payment.Cliente;
-import ec.com.peigo.model.payment.Cuenta;
-import ec.com.peigo.service.payment.ClienteService;
-import ec.com.peigo.service.payment.CuentaService;
+import ec.com.peigo.service.payment.ClientService;
+import ec.com.peigo.service.payment.AccountService;
 
 /**
  * 
@@ -47,10 +47,10 @@ public class AccountController {
 	private static final Logger log = LoggerFactory.getLogger(AccountController.class);
 
 	@Autowired
-	private CuentaService service;
+	private AccountService service;
 
 	@Autowired
-	private ClienteService clienteService;
+	private ClientService clientService;
 
 	/**
 	 * 
@@ -64,31 +64,30 @@ public class AccountController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PostMapping
-	public ResponseEntity<?> create(@Validated @RequestBody AccountRequestVo cuentaEntradaDto) {
+	public ResponseEntity<?> create(@Validated @RequestBody AccountRequest cuentaEntradaDto) {
 		try {
 
-			Optional<Cliente> clienteEncontrado = null;
+			Optional<ClientDto> clienteEncontrado = null;
 			if (!ObjectUtils.isEmpty(cuentaEntradaDto.getIdentificacion())) {
-				clienteEncontrado = clienteService.obtenerPorIdentificacion(cuentaEntradaDto.getIdentificacion());
+				clienteEncontrado = clientService.getByIdentification(cuentaEntradaDto.getIdentificacion());
 			} else {
-				clienteEncontrado = clienteService.obtenerPorId(cuentaEntradaDto.getIdCliente());
+				clienteEncontrado = clientService.getById(cuentaEntradaDto.getIdCliente());
 			}
 
 			if (null != clienteEncontrado && clienteEncontrado.isPresent()) {
-				Cliente cliente = clienteEncontrado.get();
-				if (StateEmun.INACTIVO.getDescripcion().equals(cliente.getEstado())) {
-					return new ResponseEntity<>("El cliente se encuentra inactivo", HttpStatus.BAD_REQUEST);
+				ClientDto clientDto = clienteEncontrado.get();
+				if (StateEmun.INACTIVO.getDescripcion().equals(clientDto.getState())) {
+					return new ResponseEntity<>("El clientDto se encuentra inactivo", HttpStatus.BAD_REQUEST);
 				} else {
-					Cuenta cuenta = new Cuenta();
-					cuenta.setNumero(Integer.parseInt(cuentaEntradaDto.getNumero()));
-					cuenta.setTipoCuenta(cuentaEntradaDto.getTipoCuenta());
-					cuenta.setSaldoInicial(BigDecimal.valueOf(cuentaEntradaDto.getSaldoInicial()));
-					cuenta.setEstado(StateEmun.ACTIVO.getDescripcion());
-					cuenta.setIdCliente(clienteEncontrado.get().getClienteId());
-					Cuenta cuentaGuardada = service.create(cuenta);
-					return new ResponseEntity<Cuenta>(cuentaGuardada, HttpStatus.CREATED);
+					AccountDto accountDto = new AccountDto();
+					accountDto.setNumber(Integer.parseInt(cuentaEntradaDto.getNumero()));
+					accountDto.setAccountType(cuentaEntradaDto.getTipoCuenta());
+					accountDto.setBalance(BigDecimal.valueOf(cuentaEntradaDto.getSaldoInicial()));
+					accountDto.setState(StateEmun.ACTIVO.getDescripcion());
+					accountDto.setIdClient(clienteEncontrado.get().getIdClient());
+					AccountDto accountDtoGuardada = service.create(accountDto);
+					return new ResponseEntity<AccountDto>(accountDtoGuardada, HttpStatus.CREATED);
 				}
-
 			}
 			return new ResponseEntity<>("No se encuentra registrado como cliente", HttpStatus.BAD_REQUEST);
 
@@ -110,22 +109,22 @@ public class AccountController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@GetMapping
-	public ResponseEntity<?> obtenerCuentaPorCliente(@Validated @RequestBody AccountRequestVo cuentaEntradaDto) {
+	public ResponseEntity<?> obtenerCuentaPorCliente(@Validated @RequestBody AccountRequest cuentaEntradaDto) {
 		try {
-			Optional<Cliente> clienteEncontrado = null;
+			Optional<ClientDto> clienteEncontrado = null;
 			if (!ObjectUtils.isEmpty(cuentaEntradaDto.getIdentificacion())) {
-				clienteEncontrado = clienteService.obtenerPorIdentificacion(cuentaEntradaDto.getIdentificacion());
+				clienteEncontrado = clientService.getByIdentification(cuentaEntradaDto.getIdentificacion());
 			} else {
-				clienteEncontrado = clienteService.obtenerPorId(cuentaEntradaDto.getIdCliente());
+				clienteEncontrado = clientService.getById(cuentaEntradaDto.getIdCliente());
 			}
 			if (ObjectUtils.isEmpty(clienteEncontrado)) {
 				return new ResponseEntity<>("No existe el cliente", HttpStatus.BAD_REQUEST);
 			}
-			List<Cuenta> listaCuenta = service.obtenerPorCliente(clienteEncontrado.get().getClienteId());
-			if (null == listaCuenta || listaCuenta.isEmpty()) {
+			List<AccountDto> listaAccountDto = service.getByClient(clienteEncontrado.get().getIdClient());
+			if (null == listaAccountDto || listaAccountDto.isEmpty()) {
 				return new ResponseEntity<>("No existe cuenta con el id", HttpStatus.BAD_REQUEST);
 			} else {
-				return new ResponseEntity<List<Cuenta>>(listaCuenta, HttpStatus.OK);
+				return new ResponseEntity<List<AccountDto>>(listaAccountDto, HttpStatus.OK);
 			}
 
 		} catch (Exception e) {
@@ -147,21 +146,21 @@ public class AccountController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PutMapping
-	public ResponseEntity<?> update(@Validated @RequestBody AccountRequestVo cuentaEntradaDto) {
+	public ResponseEntity<?> update(@Validated @RequestBody AccountRequest cuentaEntradaDto) {
 		try {
 			if (ObjectUtils.isEmpty(cuentaEntradaDto.getIdCuenta())) {
 				return new ResponseEntity<>("Debe colocar el id de la cuenta", HttpStatus.BAD_REQUEST);
 			}
-			Optional<Cuenta> cuenta = service.obtenerPorId(cuentaEntradaDto.getIdCuenta());
+			Optional<AccountDto> cuenta = service.getById(cuentaEntradaDto.getIdCuenta());
 			if (cuenta.isPresent()) {
-				Cuenta cuentaActualizar = cuenta.get();
-				cuentaActualizar.setNumero(Integer.parseInt(cuentaEntradaDto.getNumero()));
-				cuentaActualizar.setTipoCuenta(cuentaEntradaDto.getTipoCuenta());
-				cuentaActualizar
-						.setSaldoInicial(BigDecimal.valueOf(Double.valueOf(cuentaEntradaDto.getSaldoInicial())));
-				cuentaActualizar.setEstado(cuentaEntradaDto.getEstado());
-				Cuenta cuentaGuardada = service.update(cuentaActualizar);
-				return new ResponseEntity<Cuenta>(cuentaGuardada, HttpStatus.OK);
+				AccountDto accountDtoActualizar = cuenta.get();
+				accountDtoActualizar.setNumber(Integer.parseInt(cuentaEntradaDto.getNumero()));
+				accountDtoActualizar.setAccountType(cuentaEntradaDto.getTipoCuenta());
+				accountDtoActualizar
+						.setBalance(BigDecimal.valueOf(Double.valueOf(cuentaEntradaDto.getSaldoInicial())));
+				accountDtoActualizar.setState(cuentaEntradaDto.getEstado());
+				AccountDto accountDtoGuardada = service.update(accountDtoActualizar);
+				return new ResponseEntity<AccountDto>(accountDtoGuardada, HttpStatus.OK);
 			}
 			return new ResponseEntity<>("No se encuentra la cuenta", HttpStatus.BAD_REQUEST);
 
@@ -185,7 +184,7 @@ public class AccountController {
 	@DeleteMapping("/{id}")
 	public ResponseEntity<?> delete(@PathVariable("id") Long id) {
 		try {
-			Optional<Cuenta> cuenta = service.obtenerPorId(id);
+			Optional<AccountDto> cuenta = service.getById(id);
 			if (cuenta.isPresent()) {
 				service.delete(id);
 				return new ResponseEntity<>("Registro Eliminado", HttpStatus.OK);
