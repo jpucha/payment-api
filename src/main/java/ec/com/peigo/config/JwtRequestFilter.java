@@ -10,7 +10,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import ec.com.peigo.model.DAOAuthority;
+import ec.com.peigo.model.AuthorityDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
@@ -79,9 +79,14 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private List<GrantedAuthority> getGrantedAuthorities(Set<DAOAuthority> authorities) {
+    /**
+     * Get Granted Authorities
+     * @param authorities
+     * @return
+     */
+    private List<GrantedAuthority> getGrantedAuthorities(Set<AuthorityDto> authorities) {
         List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
-        for (DAOAuthority authority : authorities) {
+        for (AuthorityDto authority : authorities) {
             grantedAuthorities.add(new SimpleGrantedAuthority(authority.getName()));
         }
         return grantedAuthorities;
