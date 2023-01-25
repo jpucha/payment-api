@@ -8,23 +8,37 @@ import static io.restassured.RestAssured.baseURI;
 import static io.restassured.RestAssured.given;
 import static io.restassured.RestAssured.port;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
 
 import ec.com.peigo.PaymentApiApplicationTests;
+import ec.com.peigo.controller.payment.dto.CuentaEntradaDto;
+
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ec.com.peigo.enumeration.EstadoEmun;
 import ec.com.peigo.model.payment.Cuenta;
@@ -42,53 +56,39 @@ import io.restassured.response.ValidatableResponse;
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, classes = PaymentApiApplicationTests.class)
 @TestInstance(Lifecycle.PER_CLASS)
-@ActiveProfiles({ "integration" })
+@ActiveProfiles({"integration"})
 @TestMethodOrder(OrderAnnotation.class)
 public class TestCuenta {
+    
+    public static final String TIPO_CUENTA_AHORRO = "Ahorro";
 
-	public static final String TIPO_CUENTA_AHORRO = "Ahorro";
+    @Autowired
+    private ObjectMapper mapper;
+    @Autowired
+    private WebApplicationContext context;
 
-	@Value("${local.server.port}")
-	private int ports;
+    private MockMvc mvc;
 
-	@BeforeAll
-	public void setUp() {
-		port = ports;
-		baseURI = "http://localhost:8080/api/cuentas";
-	}
+    @BeforeEach
+    public void setup() {
+        mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+    }
 
-	@Test
-	@Order(1)
-	public void get_obtenerCuentaPorCliente_returnsObtenerCuentaPorCliente_450() {
+    @Test
+    @Order(1)
+    @WithMockUser(username = "felord", password = "felord.cn", roles = {"CUSTOMER"})
+    public void post_nuevaCuenta_returnsUserNoRegistrado_400() throws Exception {
 
-		ValidatableResponse response = given().contentType(MediaType.APPLICATION_JSON_VALUE)
-				.accept(MediaType.APPLICATION_JSON_VALUE).when().get("/1720987453").then();
+        CuentaEntradaDto cuenta = new CuentaEntradaDto();
 
-		System.out.println("'get_obtenerCuentaPorCliente_returnsObtenerCuentaPorCliente_450()' response:\n"
-				+ response.extract().asString());
+        cuenta.setTipoCuenta(TIPO_CUENTA_AHORRO);
+        cuenta.setIdentificacion("1712312312");
+        cuenta.setSaldoInicial(BigDecimal.valueOf(100).doubleValue());
+        cuenta.setNumero("123456789");
+        cuenta.setIdCliente(1L);
 
-		response.assertThat().statusCode(HttpStatus.METHOD_NOT_ALLOWED.value());
-	}
-
-	@Test
-	@Order(2)
-	public void post_nuevaCuenta_returnsNuevaCuenta_200() {
-		
-		Cuenta cuenta = new Cuenta();
-		
-		cuenta.setTipoCuenta(TIPO_CUENTA_AHORRO);
-		cuenta.setSaldoInicial(BigDecimal.valueOf(100));
-		cuenta.setEstado(EstadoEmun.ACTIVO.getDescripcion());
-		cuenta.setIdCliente(1L);
-
-		ValidatableResponse response = given().contentType(MediaType.APPLICATION_JSON_VALUE)
-				.accept(MediaType.APPLICATION_JSON_VALUE).body(cuenta).when().post("").then();
-
-		System.out.println(
-				"'post_nuevaCuenta_returnsNuevaCuenta_200()' response:\n" + response.extract().asString());
-
-		response.assertThat().statusCode(HttpStatus.CREATED.value())
-				.body(containsString("estado"));
-	}
+        mvc.perform(MockMvcRequestBuilders.post("/api/cuentas").accept(MediaType.APPLICATION_JSON).contentType(MediaType.APPLICATION_JSON)
+                    .content(mapper.writeValueAsString(cuenta))).andExpect(status().isBadRequest());
+    }
 
 }
