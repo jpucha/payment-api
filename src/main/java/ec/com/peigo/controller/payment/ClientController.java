@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import ec.com.peigo.controller.payment.dto.ClienteEntradaDto;
+import ec.com.peigo.controller.payment.dto.ClientRequestVo;
 import ec.com.peigo.model.payment.Cliente;
 import ec.com.peigo.service.payment.ClienteService;
 
@@ -37,8 +37,8 @@ import ec.com.peigo.service.payment.ClienteService;
  */
 @RestController
 @RequestMapping("/api/clientes")
-public class ClienteController {
-	private static final Logger log = LoggerFactory.getLogger(ClienteController.class);
+public class ClientController {
+	private static final Logger log = LoggerFactory.getLogger(ClientController.class);
 
 	@Autowired
 	private ClienteService service;
@@ -55,7 +55,7 @@ public class ClienteController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PostMapping
-	public ResponseEntity<?> create(@Validated @RequestBody ClienteEntradaDto clienteEntradaDto) {
+	public ResponseEntity<?> create(@Validated @RequestBody ClientRequestVo clienteEntradaDto) {
 		try {
 
 			Optional<Cliente> clienteEncontrado = service
@@ -95,7 +95,7 @@ public class ClienteController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@GetMapping
-	public ResponseEntity<?> obtenerCliente(@Validated @RequestBody ClienteEntradaDto clienteEntradaDto) {
+	public ResponseEntity<?> obtenerCliente(@Validated @RequestBody ClientRequestVo clienteEntradaDto) {
 		try {
 			Optional<Cliente> clienteEncontrado = service
 					.obtenerPorIdentificacion(clienteEntradaDto.getIdentificacion());
@@ -122,7 +122,7 @@ public class ClienteController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PutMapping
-	public ResponseEntity<?> update(@Validated @RequestBody ClienteEntradaDto clienteEntradaDto) {
+	public ResponseEntity<?> update(@Validated @RequestBody ClientRequestVo clienteEntradaDto) {
 		try {
 			Optional<Cliente> clienteEncontrado = null;
 			if (!ObjectUtils.isEmpty(clienteEntradaDto.getIdentificacion())) {

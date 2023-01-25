@@ -16,14 +16,14 @@ import lombok.Getter;
  *          </p>
  */
 @Getter
-public enum EstadoEmun {
+public enum StateEmun {
 
 	ACTIVO("A", "True"), INACTIVO("I", "False");
 
 	private String codigo;
 	private String descripcion;
 
-	private EstadoEmun(String codigo, String descripcion) {
+	private StateEmun(String codigo, String descripcion) {
 		this.codigo = codigo;
 		this.descripcion = descripcion;
 	}

@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import ec.com.peigo.controller.payment.dto.CuentaEntradaDto;
-import ec.com.peigo.enumeration.EstadoEmun;
+import ec.com.peigo.controller.payment.dto.AccountRequestVo;
+import ec.com.peigo.enumeration.StateEmun;
 import ec.com.peigo.model.payment.Cliente;
 import ec.com.peigo.model.payment.Cuenta;
 import ec.com.peigo.service.payment.ClienteService;
@@ -42,9 +42,9 @@ import ec.com.peigo.service.payment.CuentaService;
  */
 @RestController
 @RequestMapping("/api/cuentas")
-public class CuentaController {
+public class AccountController {
 
-	private static final Logger log = LoggerFactory.getLogger(CuentaController.class);
+	private static final Logger log = LoggerFactory.getLogger(AccountController.class);
 
 	@Autowired
 	private CuentaService service;
@@ -64,7 +64,7 @@ public class CuentaController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PostMapping
-	public ResponseEntity<?> create(@Validated @RequestBody CuentaEntradaDto cuentaEntradaDto) {
+	public ResponseEntity<?> create(@Validated @RequestBody AccountRequestVo cuentaEntradaDto) {
 		try {
 
 			Optional<Cliente> clienteEncontrado = null;
@@ -76,14 +76,14 @@ public class CuentaController {
 
 			if (null != clienteEncontrado && clienteEncontrado.isPresent()) {
 				Cliente cliente = clienteEncontrado.get();
-				if (EstadoEmun.INACTIVO.getDescripcion().equals(cliente.getEstado())) {
+				if (StateEmun.INACTIVO.getDescripcion().equals(cliente.getEstado())) {
 					return new ResponseEntity<>("El cliente se encuentra inactivo", HttpStatus.BAD_REQUEST);
 				} else {
 					Cuenta cuenta = new Cuenta();
 					cuenta.setNumero(Integer.parseInt(cuentaEntradaDto.getNumero()));
 					cuenta.setTipoCuenta(cuentaEntradaDto.getTipoCuenta());
 					cuenta.setSaldoInicial(BigDecimal.valueOf(cuentaEntradaDto.getSaldoInicial()));
-					cuenta.setEstado(EstadoEmun.ACTIVO.getDescripcion());
+					cuenta.setEstado(StateEmun.ACTIVO.getDescripcion());
 					cuenta.setIdCliente(clienteEncontrado.get().getClienteId());
 					Cuenta cuentaGuardada = service.create(cuenta);
 					return new ResponseEntity<Cuenta>(cuentaGuardada, HttpStatus.CREATED);
@@ -110,7 +110,7 @@ public class CuentaController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@GetMapping
-	public ResponseEntity<?> obtenerCuentaPorCliente(@Validated @RequestBody CuentaEntradaDto cuentaEntradaDto) {
+	public ResponseEntity<?> obtenerCuentaPorCliente(@Validated @RequestBody AccountRequestVo cuentaEntradaDto) {
 		try {
 			Optional<Cliente> clienteEncontrado = null;
 			if (!ObjectUtils.isEmpty(cuentaEntradaDto.getIdentificacion())) {
@@ -147,7 +147,7 @@ public class CuentaController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PutMapping
-	public ResponseEntity<?> update(@Validated @RequestBody CuentaEntradaDto cuentaEntradaDto) {
+	public ResponseEntity<?> update(@Validated @RequestBody AccountRequestVo cuentaEntradaDto) {
 		try {
 			if (ObjectUtils.isEmpty(cuentaEntradaDto.getIdCuenta())) {
 				return new ResponseEntity<>("Debe colocar el id de la cuenta", HttpStatus.BAD_REQUEST);

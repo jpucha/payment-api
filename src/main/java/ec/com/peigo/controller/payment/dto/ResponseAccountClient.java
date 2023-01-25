@@ -11,7 +11,7 @@ import java.util.Optional;
  * Response manager class.
  */
 @Data
-public class ResponseDto {
+public class ResponseAccountClient {
 
     private String code;
 

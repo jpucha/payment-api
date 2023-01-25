@@ -16,7 +16,7 @@ import lombok.Data;
  *          </p>
  */
 @Data
-public class MovimientoEntradaDto {
+public class TransactionRequest {
 
 	private Long idMovimiento;
 	private double saldo;

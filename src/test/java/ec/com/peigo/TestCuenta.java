@@ -11,7 +11,6 @@ import static org.hamcrest.CoreMatchers.containsString;
 
 import java.math.BigDecimal;
 
-import ec.com.peigo.PaymentApiApplicationTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
@@ -26,7 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 
-import ec.com.peigo.enumeration.EstadoEmun;
+import ec.com.peigo.enumeration.StateEmun;
 import ec.com.peigo.model.payment.Cuenta;
 
 import io.restassured.response.ValidatableResponse;
@@ -78,7 +77,7 @@ public class TestCuenta {
 		
 		cuenta.setTipoCuenta(TIPO_CUENTA_AHORRO);
 		cuenta.setSaldoInicial(BigDecimal.valueOf(100));
-		cuenta.setEstado(EstadoEmun.ACTIVO.getDescripcion());
+		cuenta.setEstado(StateEmun.ACTIVO.getDescripcion());
 		cuenta.setIdCliente(1L);
 
 		ValidatableResponse response = given().contentType(MediaType.APPLICATION_JSON_VALUE)

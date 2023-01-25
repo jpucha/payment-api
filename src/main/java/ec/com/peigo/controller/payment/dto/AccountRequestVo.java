@@ -16,7 +16,7 @@ import lombok.Data;
  *          </p>
  */
 @Data
-public class CuentaEntradaDto {
+public class AccountRequestVo {
 
 	private Long idCuenta;
 	private String identificacion;

@@ -16,14 +16,14 @@ import lombok.Getter;
  *          </p>
  */
 @Getter
-public enum TipoMovimientoEnum {
+public enum TransactionTypeEnum {
 
 	CREDITO("CRE", "credito"), DEBITO("DEB", "debito");
 
 	private String codigo;
 	private String descripcion;
 
-	private TipoMovimientoEnum(String codigo, String descripcion) {
+	private TransactionTypeEnum(String codigo, String descripcion) {
 		this.codigo = codigo;
 		this.descripcion = descripcion;
 	}

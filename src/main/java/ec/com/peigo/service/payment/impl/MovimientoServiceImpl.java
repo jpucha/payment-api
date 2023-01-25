@@ -8,10 +8,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
-import ec.com.peigo.controller.payment.dto.PaymentInDto;
-import ec.com.peigo.controller.payment.dto.PaymentOutDto;
-import ec.com.peigo.controller.payment.dto.ResponseDto;
-import ec.com.peigo.enumeration.TipoMovimientoEnum;
+import ec.com.peigo.controller.payment.dto.PaymentRequest;
+import ec.com.peigo.controller.payment.dto.PaymentResponse;
+import ec.com.peigo.controller.payment.dto.ResponseAccountClient;
+import ec.com.peigo.enumeration.TransactionTypeEnum;
 import ec.com.peigo.model.payment.Cliente;
 import ec.com.peigo.model.payment.Cuenta;
 import ec.com.peigo.service.payment.CuentaService;
@@ -23,7 +23,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import ec.com.peigo.controller.payment.dto.ReporteDto;
 import ec.com.peigo.model.payment.Movimiento;
 import ec.com.peigo.repository.payment.MovimientoRepository;
 import ec.com.peigo.service.payment.MovimientoService;
@@ -96,34 +95,28 @@ public class MovimientoServiceImpl implements MovimientoService {
 		return movimientoRepository.sumaValorPorClienteCuentaFecha(clienteId, idCuenta, tipoMovimiento, fecha);
 	}
 
-	@Override
-	public List<ReporteDto> obtenerPorFechas(Date fechaInicial, Date fechaFinal) {
-		return movimientoRepository.buscarPorEntreFechas(fechaInicial, fechaFinal);
-	}
-
-
 	@Transactional
 	@Override
-	public ResponseEntity<?> createPaymentTransaction(ResponseDto responseDto, PaymentInDto paymentInDto, String transactionNumber ) throws Exception {
+	public ResponseEntity<?> createPaymentTransaction(ResponseAccountClient responseDto, PaymentRequest paymentInDto, String transactionNumber ) throws Exception {
 		try {
 			//Create debit transaction
 			Movimiento debit = createTransaction(responseDto.getCuentaOrigen(), responseDto.getClienteOrigen(),
-					paymentInDto.getMonto(), TipoMovimientoEnum.DEBITO.getDescripcion(), transactionNumber);
+					paymentInDto.getMonto(), TransactionTypeEnum.DEBITO.getDescripcion(), transactionNumber);
 			//Update origin account
 			responseDto.getCuentaOrigen().get().setSaldoInicial(debit.getSaldo());
 			cuentaService.update(responseDto.getCuentaOrigen().get());
 			//Create credit transaction
 			Movimiento credit = createTransaction(responseDto.getCuentaDestino(), responseDto.getClienteDestino(),
-					paymentInDto.getMonto(), TipoMovimientoEnum.CREDITO.getDescripcion(), transactionNumber);
+					paymentInDto.getMonto(), TransactionTypeEnum.CREDITO.getDescripcion(), transactionNumber);
 			//Update destination account
 			responseDto.getCuentaDestino().get().setSaldoInicial(credit.getSaldo());
 			cuentaService.update(responseDto.getCuentaDestino().get());
 			//result
-			PaymentOutDto result = new PaymentOutDto();
+			PaymentResponse result = new PaymentResponse();
 			result.setNumeroOperacion(transactionNumber);
 			result.setSaldoCuentaOrigen(debit.getSaldo());
 			result.setSaldoCuentaDestino(credit.getSaldo());
-			return new ResponseEntity<PaymentOutDto>(result, HttpStatus.CREATED);
+			return new ResponseEntity<PaymentResponse>(result, HttpStatus.CREATED);
 		}catch (Exception e){
 			log.error("Error: createPaymentTransaction: ", e);
 			throw new Exception(e);
@@ -150,7 +143,7 @@ public class MovimientoServiceImpl implements MovimientoService {
 			transaction.setValor(valor);
 			transaction.setTipoMovimiento(tipoMovimiento);
 			transaction.setSaldoAnterior(cuenta.get().getSaldoInicial());
-			if(StringUtils.equalsAnyIgnoreCase(TipoMovimientoEnum.DEBITO.getDescripcion(),tipoMovimiento) ){
+			if(StringUtils.equalsAnyIgnoreCase(TransactionTypeEnum.DEBITO.getDescripcion(),tipoMovimiento) ){
 				transaction.setSaldo(transaction.getSaldoAnterior().subtract(transaction.getValor()));
 			}else{
 				transaction.setSaldo(transaction.getSaldoAnterior().add(transaction.getValor()));

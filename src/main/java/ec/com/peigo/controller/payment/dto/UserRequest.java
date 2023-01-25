@@ -6,7 +6,7 @@ import lombok.Data;
 import java.util.Set;
 
 @Data
-public class UserInDto {
+public class UserRequest {
     private String username;
     private String password;
     private Set<AuthorityDto> authorities;

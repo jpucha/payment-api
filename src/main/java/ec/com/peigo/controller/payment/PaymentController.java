@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import ec.com.peigo.controller.payment.dto.PaymentInDto;
-import ec.com.peigo.controller.payment.dto.ResponseDto;
+import ec.com.peigo.controller.payment.dto.PaymentRequest;
+import ec.com.peigo.controller.payment.dto.ResponseAccountClient;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +28,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import ec.com.peigo.controller.payment.dto.MovimientoEntradaDto;
-import ec.com.peigo.enumeration.TipoMovimientoEnum;
+import ec.com.peigo.controller.payment.dto.TransactionRequest;
+import ec.com.peigo.enumeration.TransactionTypeEnum;
 import ec.com.peigo.model.payment.Cliente;
 import ec.com.peigo.model.payment.Cuenta;
 import ec.com.peigo.model.payment.Movimiento;
@@ -49,9 +49,9 @@ import ec.com.peigo.service.payment.MovimientoService;
  */
 @RestController
 @RequestMapping("/api/paymentTransaction")
-public class MovimientoController {
+public class PaymentController {
 
-	private static final Logger log = LoggerFactory.getLogger(MovimientoController.class);
+	private static final Logger log = LoggerFactory.getLogger(PaymentController.class);
 
 	public static final String USER_MOD = "peigoadmin2";
 
@@ -78,17 +78,17 @@ public class MovimientoController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PostMapping
-	public ResponseEntity<?> create(@Validated @RequestBody PaymentInDto paymentInDto) {
+	public ResponseEntity<?> create(@Validated @RequestBody PaymentRequest paymentInDto) {
 
 		try {
-			ResponseDto responseDto = new ResponseDto();
+			ResponseAccountClient responseAccountClient = new ResponseAccountClient();
 			//validations
-			if(validate(paymentInDto, responseDto)){
+			if(validate(paymentInDto, responseAccountClient)){
 				//Get transaction number.
-				String transactionNumber = getTransactionNumber(responseDto.getCuentaOrigen().get().getNumero());
-				return movimientoService.createPaymentTransaction(responseDto,paymentInDto,transactionNumber);
+				String transactionNumber = getTransactionNumber(responseAccountClient.getCuentaOrigen().get().getNumero());
+				return movimientoService.createPaymentTransaction(responseAccountClient,paymentInDto,transactionNumber);
 			}
-			return new ResponseEntity<>(responseDto.getErrorMessage(), HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>(responseAccountClient.getErrorMessage(), HttpStatus.BAD_REQUEST);
 		} catch (Exception e) {
 			log.error("Por favor comuniquese con el administrador", e);
 			return new ResponseEntity<>("Por favor comuniquese con el administrador. ", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -100,8 +100,8 @@ public class MovimientoController {
 	 * @param paymentInDto, request data.
 	 * @return ResponseDto, Response data.
 	 */
-	private ResponseDto validateDataIn (PaymentInDto paymentInDto)  {
-		ResponseDto response = new ResponseDto();
+	private ResponseAccountClient validateDataIn (PaymentRequest paymentInDto)  {
+		ResponseAccountClient response = new ResponseAccountClient();
 		//validacion que los datos de entrada de cuenta origen y cuenta destino no sean vacios o nulos
 		if (ObjectUtils.isEmpty(paymentInDto.getCuentaOrigen()) || ObjectUtils.isEmpty(paymentInDto.getCuentaDestino())) {
 			response.setErrorMessage("Cuenta origen, cuenta destino, monto son obligatorios.");
@@ -130,8 +130,8 @@ public class MovimientoController {
 	 * @param paymentInDto, data in.
 	 * @return ResponseDto, response object.
 	 */
-	private ResponseDto validateSourceAccount(PaymentInDto paymentInDto){
-		ResponseDto response = new ResponseDto();
+	private ResponseAccountClient validateSourceAccount(PaymentRequest paymentInDto){
+		ResponseAccountClient response = new ResponseAccountClient();
 		Optional<Cuenta> cuentaOrigen = cuentaService.obtenerPorNumeroCuenta(paymentInDto.getCuentaOrigen());
 		if (!cuentaOrigen.isPresent()) {
 			response.setErrorMessage("La cuenta origen proporcionada no existe.");
@@ -152,7 +152,7 @@ public class MovimientoController {
 
 		//Validacion que este dentro del limite diario
 		Double sumaDiariaDebito = movimientoService.obtenerSumaValorClienteCuentaFecha(cuentaOrigen.get().getIdCliente(),
-				cuentaOrigen.get().getIdCuenta(), TipoMovimientoEnum.DEBITO.getDescripcion(), new Date());
+				cuentaOrigen.get().getIdCuenta(), TransactionTypeEnum.DEBITO.getDescripcion(), new Date());
 		if (limiteDiario <= sumaDiariaDebito.doubleValue() + paymentInDto.getMonto().doubleValue()) {
 			response.setErrorMessage("Cupo diario excedido");
 			return response;
@@ -173,8 +173,8 @@ public class MovimientoController {
 	 * @param paymentInDto, Data in.
 	 * @return ResponseDto, Response Data.
 	 */
-	private ResponseDto validateDestinationAccount(PaymentInDto paymentInDto){
-		ResponseDto response = new ResponseDto();
+	private ResponseAccountClient validateDestinationAccount(PaymentRequest paymentInDto){
+		ResponseAccountClient response = new ResponseAccountClient();
 		Optional<Cuenta> cuentaDestino = cuentaService.obtenerPorNumeroCuenta(paymentInDto.getCuentaDestino());
 		if (!cuentaDestino.isPresent()) {
 			response.setErrorMessage("La cuenta destino proporcionada no existe.");
@@ -203,8 +203,8 @@ public class MovimientoController {
 		return today.format(format).concat(numberAccount.toString());
 	}
 
-	private Boolean validate(PaymentInDto paymentInDto, ResponseDto responseDto){
-		ResponseDto response = validateDataIn(paymentInDto);
+	private Boolean validate(PaymentRequest paymentInDto, ResponseAccountClient responseDto){
+		ResponseAccountClient response = validateDataIn(paymentInDto);
 		//Validate data in
 		String message = response.getErrorMessage();
 		if(StringUtils.isNotEmpty(message)){
@@ -245,7 +245,7 @@ public class MovimientoController {
 	 */
 	@GetMapping
 	public ResponseEntity<?> obtenerPorClienteCuenta(
-			@Validated @RequestBody MovimientoEntradaDto movimientoEntradaDto) {
+			@Validated @RequestBody TransactionRequest movimientoEntradaDto) {
 		try {
 
 			if (ObjectUtils.isEmpty(movimientoEntradaDto.getIdentificacion())
@@ -289,7 +289,7 @@ public class MovimientoController {
 	 * @return ResponseEntity<?> lista o mensaje de error
 	 */
 	@PutMapping
-	public ResponseEntity<?> update(@Validated @RequestBody MovimientoEntradaDto movimientoEntradaDto) {
+	public ResponseEntity<?> update(@Validated @RequestBody TransactionRequest movimientoEntradaDto) {
 		try {
 			if (ObjectUtils.isEmpty(movimientoEntradaDto.getIdMovimiento())) {
 				return new ResponseEntity<>("El id del movimiento es obligatorio", HttpStatus.BAD_REQUEST);

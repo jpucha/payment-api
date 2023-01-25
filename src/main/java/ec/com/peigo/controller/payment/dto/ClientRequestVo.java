@@ -16,7 +16,7 @@ import lombok.Data;
  *          </p>
  */
 @Data
-public class ClienteEntradaDto {
+public class ClientRequestVo {
 
 	private String identificacion;
 	private String contrasena;

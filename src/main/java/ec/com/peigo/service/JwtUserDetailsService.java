@@ -2,7 +2,7 @@ package ec.com.peigo.service;
 
 import java.util.*;
 
-import ec.com.peigo.controller.payment.dto.UserInDto;
+import ec.com.peigo.controller.payment.dto.UserRequest;
 import ec.com.peigo.model.*;
 import ec.com.peigo.repository.payment.AuthorityRepository;
 import ec.com.peigo.repository.payment.UserRepository;
@@ -45,7 +45,7 @@ public class JwtUserDetailsService implements UserDetailsService {
         }
         return grantedAuthorities;
     }
-    public UserDto save(UserInDto user) {
+    public UserDto save(UserRequest user) {
         UserDto newUser = new UserDto();
         AuthorityDto rol = new AuthorityDto();
         newUser.setUsername(user.getUsername());
